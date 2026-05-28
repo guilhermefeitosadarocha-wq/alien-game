@@ -2,76 +2,200 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
 <title>NEON SIEGE</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* ── MOBILE EXPERIENCE — base ──────────────────────────── */
+  html {
+    height: 100%;
+    overflow: hidden;
+    /* Respeita safe-area em dispositivos com notch/barra de gestos */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
   body {
     background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100vh;
+    /* dvh = Dynamic Viewport Height — mais preciso no mobile */
+    height: 100dvh;
+    width: 100dvw;
     overflow: hidden;
     font-family: 'Courier New', monospace;
     touch-action: none;
     user-select: none;
+    -webkit-user-select: none;
+    /* Evita highlight ao tocar em mobile */
+    -webkit-tap-highlight-color: transparent;
   }
+
   #gameCanvas {
     display: block;
     cursor: crosshair;
     image-rendering: pixelated;
+    /* Garante que o canvas não seja arrastado/selecionado no mobile */
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
   }
-  /* ── MOBILE CONTROLS ── */
+
+  /* ── MOBILE CONTROLS ─────────────────────────────────── */
   #mobileControls {
     position: fixed;
-    bottom: 0; left: 0; right: 0;
-    height: 200px;
+    /* Respeita barra de gestos inferior */
+    bottom: env(safe-area-inset-bottom, 0px);
+    left: 0; right: 0;
+    /* Altura adaptativa: maior no mobile, menor no PC */
+    height: clamp(160px, 28vmin, 220px);
     pointer-events: none;
     z-index: 100;
   }
+
   #joystickZone {
     position: absolute;
-    bottom: 20px; left: 20px;
-    width: 140px; height: 140px;
+    /* Posição adaptativa usando env safe-area e clamp */
+    bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    left: max(16px, env(safe-area-inset-left, 16px));
+    width: clamp(130px, 36vmin, 170px);
+    height: clamp(130px, 36vmin, 170px);
     pointer-events: all;
+    /* Zona de toque generosa para evitar misses */
+    touch-action: none;
   }
+
   #joystickBase {
     position: absolute;
-    width: 120px; height: 120px;
+    /* Ocupa ~86% da zona */
+    width: 86%; height: 86%;
     border-radius: 50%;
-    border: 2px solid rgba(0,200,255,0.3);
-    background: rgba(0,200,255,0.05);
-    top: 10px; left: 10px;
+    border: 2px solid rgba(0,200,255,0.35);
+    background: rgba(0,200,255,0.06);
+    top: 7%; left: 7%;
+    /* Glow sutil — feedback visual sem poluir */
+    box-shadow: 0 0 16px rgba(0,200,255,0.08), inset 0 0 20px rgba(0,200,255,0.04);
   }
+
   #joystickKnob {
     position: absolute;
-    width: 48px; height: 48px;
+    /* Knob maior = mais confortável */
+    width: clamp(44px, 12vmin, 56px);
+    height: clamp(44px, 12vmin, 56px);
     border-radius: 50%;
-    background: rgba(0,200,255,0.25);
-    border: 2px solid rgba(0,200,255,0.6);
-    box-shadow: 0 0 12px rgba(0,200,255,0.4);
-    top: 46px; left: 46px;
+    background: rgba(0,200,255,0.28);
+    border: 2px solid rgba(0,200,255,0.65);
+    box-shadow: 0 0 14px rgba(0,200,255,0.45), 0 0 28px rgba(0,200,255,0.15);
+    /* Posicionado no centro — JS sobrescreve dinamicamente */
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
     transition: box-shadow 0.1s;
+    touch-action: none;
   }
+
   #shootBtn {
     position: absolute;
-    bottom: 30px; right: 30px;
-    width: 80px; height: 80px;
+    /* Posição com safe-area */
+    bottom: max(18px, env(safe-area-inset-bottom, 18px));
+    right: max(20px, env(safe-area-inset-right, 20px));
+    /* Botão maior e mais confortável */
+    width: clamp(76px, 20vmin, 96px);
+    height: clamp(76px, 20vmin, 96px);
     border-radius: 50%;
-    border: 2px solid rgba(0,200,255,0.5);
-    background: rgba(0,200,255,0.08);
-    color: rgba(0,200,255,0.8);
-    font-size: 28px;
+    border: 2px solid rgba(0,200,255,0.55);
+    background: rgba(0,200,255,0.09);
+    color: rgba(0,200,255,0.85);
+    font-size: clamp(24px, 7vmin, 32px);
     display: flex; align-items: center; justify-content: center;
     pointer-events: all;
     cursor: pointer;
-    box-shadow: 0 0 16px rgba(0,200,255,0.2);
-    transition: background 0.1s, box-shadow 0.1s;
+    box-shadow: 0 0 20px rgba(0,200,255,0.22);
+    transition: background 0.08s, box-shadow 0.08s, transform 0.06s;
+    touch-action: none;
+    /* Previne double-tap zoom */
+    -webkit-tap-highlight-color: transparent;
   }
   #shootBtn:active {
-    background: rgba(0,200,255,0.25);
-    box-shadow: 0 0 24px rgba(0,200,255,0.5);
+    background: rgba(0,200,255,0.28);
+    box-shadow: 0 0 32px rgba(0,200,255,0.55);
+    transform: scale(0.94);
+  }
+
+  /* ── MOBILE HUD COMPACTO ─────────────────────────────────
+     Aplica-se apenas em telas mobile (portrait e landscape)   */
+  @media (max-width: 768px), (max-height: 500px) {
+
+    /* Coin panel menor e sem converter btn */
+    #coinPanel {
+      top: max(8px, env(safe-area-inset-top, 8px));
+      right: max(8px, env(safe-area-inset-right, 8px));
+      gap: 4px;
+    }
+    #coinCounter {
+      padding: 4px 10px 4px 8px;
+      border-radius: 6px;
+    }
+    #coinIcon  { font-size: 14px; }
+    #coinValue { font-size: 12px; min-width: 26px; }
+
+    /* Oculta o botão converter no mobile (pouco espaço) */
+    #convertBtn, #convertFeedback { display: none; }
+
+    /* Pause btn mais compacto */
+    #pauseBtn { width: 32px; height: 32px; font-size: 13px; top: max(8px, env(safe-area-inset-top,8px)); right: 148px; }
+
+    /* Shop btn menor */
+    #shopOpenBtn { font-size: 11px; padding: 6px 12px; top: max(8px, env(safe-area-inset-top,8px)); left: max(8px, env(safe-area-inset-left,8px)); }
+
+    /* Settings btn deslocado para não colidir */
+    #settingsBtn { bottom: max(230px, calc(28vmin + env(safe-area-inset-bottom,0px) + 20px)); font-size: 10px; padding: 6px 14px; }
+
+    /* MP toggle btn menor */
+    #mpToggleBtn { bottom: max(268px, calc(28vmin + env(safe-area-inset-bottom,0px) + 58px)); font-size: 10px; padding: 6px 14px; }
+
+    /* Diff badge menor */
+    #diffBadge { font-size: 9px; top: max(48px, calc(env(safe-area-inset-top,0px) + 46px)); right: max(8px, env(safe-area-inset-right,8px)); }
+
+    /* Boss bar sobe para não colidir com controles */
+    #bossBar { bottom: max(230px, calc(28vmin + env(safe-area-inset-bottom,0px) + 16px)); }
+
+    /* Combo display menor */
+    #comboNumber { font-size: 28px; }
+    #comboLabel  { font-size: 9px; }
+    #comboBar    { width: 80px; }
+
+    /* Energy bar reposicionada */
+    #energyBar { bottom: max(230px, calc(28vmin + env(safe-area-inset-bottom,0px) + 16px)); right: max(8px, env(safe-area-inset-right,8px)); height: 110px; width: 10px; }
+
+    /* Anchor HUD menor */
+    #anchorHUD { bottom: max(230px, calc(28vmin + env(safe-area-inset-bottom,0px) + 16px)); min-width: 180px; gap: 4px; }
+    #anchorBadge { font-size: 11px; }
+    #anchorDurTrack { width: 160px; height: 6px; }
+    #pulseTrack { width: 160px; height: 4px; }
+    #pulseLabel { font-size: 9px; }
+
+    /* Pulse btn mobile reposicionado */
+    #anchorPulseBtn { width: 54px; height: 54px; font-size: 18px; bottom: max(120px, calc(28vmin - 44px)); right: max(124px, calc(20vmin + 28px)); }
+
+    /* Reward cards menores */
+    .reward-card { width: 140px; padding: 14px 10px; }
+    .reward-card-icon { font-size: 26px; }
+    .reward-card-name { font-size: 11px; }
+    .reward-card-desc { font-size: 9px; }
+  }
+
+  /* ── LANDSCAPE MOBILE ────────────────────────────────────── */
+  @media (max-height: 500px) and (orientation: landscape) {
+    #mobileControls { height: clamp(120px, 22vmin, 160px); }
+    #joystickZone   { width: clamp(110px, 28vmin, 140px); height: clamp(110px, 28vmin, 140px); }
+    #shootBtn       { width: clamp(64px, 16vmin, 80px); height: clamp(64px, 16vmin, 80px); font-size: clamp(20px, 5vmin, 26px); }
   }
 
   /* ── COIN PANEL ── */
@@ -2046,16 +2170,65 @@ const ctx = canvas.getContext('2d');
 let scale = 1;
 let offsetX = 0, offsetY = 0;
 
+// ── MOBILE DETECTION ─────────────────────────────────────────
+// Detecta mobile uma vez; usado para ajustes de escala e HUD.
+const MobileDetect = {
+  isMobile: /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    || (navigator.maxTouchPoints > 1 && window.innerWidth < 1024),
+  isLandscape() { return window.innerWidth > window.innerHeight; },
+  safeTop()    { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0') || 0; },
+  safeBottom() { return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab') || '0') || 0; },
+};
+
+// ── CANVAS RESIZE — ocupa toda a tela sem distorção ──────────
+// No mobile: escala maximizada com letterbox mínimo.
+// No PC: comportamento original (letterbox centralizado).
 function resizeCanvas() {
-  const sw = window.innerWidth, sh = window.innerHeight;
-  scale = Math.min(sw / CONFIG.TARGET_W, sh / CONFIG.TARGET_H);
+  // Usa visualViewport quando disponível (mais preciso no mobile)
+  const vvp = window.visualViewport;
+  const sw  = vvp ? vvp.width  : window.innerWidth;
+  const sh  = vvp ? vvp.height : window.innerHeight;
+
   canvas.width  = sw;
   canvas.height = sh;
+
+  if (MobileDetect.isMobile) {
+    // MOBILE: escala para preencher toda a tela.
+    // Usa o MAIOR dos dois eixos para minimizar letterbox.
+    // O canvas interno (800×600) é escalado para cobrir o máximo possível.
+    const scaleX = sw / CONFIG.TARGET_W;
+    const scaleY = sh / CONFIG.TARGET_H;
+
+    // "contain" adaptativo: se landscape e tela muito curta, usa scaleY
+    // para não perder a arena verticalmente. Senão, usa o menor (contain padrão).
+    scale = MobileDetect.isLandscape() && sh < 420
+      ? scaleY
+      : Math.min(scaleX, scaleY);
+
+    // Em portrait mobile: aumenta escala ligeiramente para reduzir barras laterais
+    if (!MobileDetect.isLandscape() && scaleX < scaleY) {
+      // Ocupa 100% da largura e centraliza verticalmente
+      scale = scaleX;
+    }
+  } else {
+    // PC: comportamento original
+    scale = Math.min(sw / CONFIG.TARGET_W, sh / CONFIG.TARGET_H);
+  }
+
   offsetX = (sw - CONFIG.TARGET_W * scale) / 2;
   offsetY = (sh - CONFIG.TARGET_H * scale) / 2;
 }
 resizeCanvas();
+
+// Escuta resize e visualViewport (mobile browser chrome show/hide)
 window.addEventListener('resize', resizeCanvas);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', resizeCanvas);
+  window.visualViewport.addEventListener('scroll', resizeCanvas);
+}
+
+// Atualiza ao mudar orientação
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 120));
 
 // ═══════════════════════════════════════════════════════════
 //  UTILITY
@@ -2751,7 +2924,8 @@ const UI = {
 
     ctx.save();
     ctx.strokeStyle = gc; ctx.lineWidth = 1;
-    const gs = 40;
+    // No mobile com baixa resolução, grade maior = menos linhas = melhor FPS
+    const gs = MobileDetect.isMobile ? 60 : 40;
     for (let x = 0; x <= CONFIG.TARGET_W; x += gs) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CONFIG.TARGET_H); ctx.stroke();
     }
@@ -2980,9 +3154,11 @@ const Mobile = {
     const knob     = document.getElementById('joystickKnob');
     const base     = document.getElementById('joystickBase');
     const shootBtn = document.getElementById('shootBtn');
-    const baseR    = 60;
+    // baseR dinâmico: metade do diâmetro real da base no momento do toque
+    const getBaseR = () => Math.round(base.offsetWidth / 2) || 60;
 
     const getKnobPos = (cx, cy) => {
+      const baseR = getBaseR();
       const dx = cx - this._joyOrigin.x, dy = cy - this._joyOrigin.y;
       const d  = Math.hypot(dx, dy);
       const clamped = Math.min(d, baseR);
@@ -3000,14 +3176,16 @@ const Mobile = {
       const t = e.changedTouches[0];
       this._joyTouchId  = t.identifier;
       this._joyActive   = true;
-      const r = zone.getBoundingClientRect();
+      const r   = zone.getBoundingClientRect();
+      const bR  = getBaseR();
+      const kHf = Math.round(knob.offsetWidth / 2) || 24;
       this._joyOrigin.x = t.clientX - r.left;
       this._joyOrigin.y = t.clientY - r.top;
-      // Mover base para onde tocou
-      base.style.left = (this._joyOrigin.x - baseR) + 'px';
-      base.style.top  = (this._joyOrigin.y - baseR) + 'px';
-      knob.style.left = (this._joyOrigin.x - 24) + 'px';
-      knob.style.top  = (this._joyOrigin.y - 24) + 'px';
+      // Mover base para onde tocou (joystick flutuante)
+      base.style.left = (this._joyOrigin.x - bR) + 'px';
+      base.style.top  = (this._joyOrigin.y - bR) + 'px';
+      knob.style.left = (this._joyOrigin.x - kHf) + 'px';
+      knob.style.top  = (this._joyOrigin.y - kHf) + 'px';
     }, { passive: false });
 
     zone.addEventListener('touchmove', e => {
@@ -3017,8 +3195,9 @@ const Mobile = {
         const r   = zone.getBoundingClientRect();
         const cx  = t.clientX - r.left, cy = t.clientY - r.top;
         const { kx, ky, nx, ny } = getKnobPos(cx, cy);
-        knob.style.left = (this._joyOrigin.x + kx - 24) + 'px';
-        knob.style.top  = (this._joyOrigin.y + ky - 24) + 'px';
+        const kHalf = Math.round(knob.offsetWidth / 2) || 24;
+        knob.style.left = (this._joyOrigin.x + kx - kHalf) + 'px';
+        knob.style.top  = (this._joyOrigin.y + ky - kHalf) + 'px';
         this.joyVec.x = nx; this.joyVec.y = ny;
         // Modo Âncora: joystick controla mira (rotação) em vez de movimento
         if (typeof AnchorMode !== 'undefined' && AnchorMode.active) {
@@ -3040,8 +3219,11 @@ const Mobile = {
         this._joyActive = false;
         this._joyTouchId = null;
         this.joyVec.x = 0; this.joyVec.y = 0;
-        knob.style.left = '46px'; knob.style.top = '46px';
-        base.style.left = '10px'; base.style.top = '10px';
+        // Reseta knob para o centro da base (calculado pelo tamanho real)
+        const knobHalf = Math.round(knob.offsetWidth / 2) || 24;
+        const baseOff  = Math.round((zone.offsetWidth - base.offsetWidth) / 2) || 10;
+        knob.style.left = '';  knob.style.top  = '';  // deixa CSS (50%/translate) assumir
+        base.style.left = baseOff + 'px'; base.style.top = baseOff + 'px';
       }
     };
     zone.addEventListener('touchend',    joyEnd, { passive: false });
@@ -3107,6 +3289,8 @@ const Game = {
     EnergySystem.showBar(true);
     // Multiplayer reset
     MultiplayerSystem.reset();
+    // Mobile fullscreen: tenta entrar em tela cheia ao iniciar partida
+    MobileExperience.requestFullscreen();
     this.state = 'playing';
     if (typeof PauseUI !== 'undefined' && PauseUI._elPauseBtn) {
       PauseUI.syncPauseBtn('playing');
@@ -3266,6 +3450,7 @@ const Game = {
     const dt = Math.min((ts - this.lastTime) / 1000, 0.05);
     this.lastTime = ts;
 
+    // Limpar toda a área física do canvas (incluindo barras laterais)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -7844,6 +8029,101 @@ const AnchorMode = {
 // Quando ativo: bloqueia deslocamento, mantém rotação livre.
 // (Veja patch em PlayerMovement.update abaixo)
 
+
+// ═══════════════════════════════════════════════════════════
+//  MOBILE EXPERIENCE SYSTEM
+//  Cuida de: fullscreen, canvas.toWorld mobile-aware,
+//  performance adaptativa e safe-area.
+// ═══════════════════════════════════════════════════════════
+const MobileExperience = {
+
+  // ── Fullscreen API cross-browser ─────────────────────────
+  requestFullscreen() {
+    if (!MobileDetect.isMobile) return;
+    const el = document.documentElement;
+    const fn = el.requestFullscreen
+      || el.webkitRequestFullscreen
+      || el.mozRequestFullScreen
+      || el.msRequestFullscreen;
+    if (fn) {
+      fn.call(el).catch(() => {});   // ignora erro se bloqueado
+    }
+    // Lock orientação landscape se preferido (opcional — comentar para permitir portrait)
+    // if (screen.orientation && screen.orientation.lock) {
+    //   screen.orientation.lock('landscape').catch(() => {});
+    // }
+  },
+
+  exitFullscreen() {
+    const fn = document.exitFullscreen
+      || document.webkitExitFullscreen
+      || document.mozCancelFullScreen;
+    if (fn) fn.call(document).catch(() => {});
+  },
+
+  // ── Performance adaptativa no mobile ─────────────────────
+  // Reduz partículas e sombras em dispositivos lentos.
+  applyMobilePerf() {
+    if (!MobileDetect.isMobile) return;
+    // Detecta GPU fraca via heurística: tela pequena ou baixa memória
+    const isLowEnd = (navigator.deviceMemory && navigator.deviceMemory <= 2)
+      || (window.innerWidth * window.innerHeight < 360000);   // < ~600×600
+
+    if (isLowEnd) {
+      Performance.MAX_PARTICLES    = 120;
+      Performance.MAX_BULLETS      = 60;
+      Performance.MAX_ENEMY_BULLETS = 20;
+      Performance.MAX_FLOAT_TEXTS  = 10;
+      Performance.MAX_ENEMIES      = 35;
+      // Desativa screen shake no low-end (custo de reflow)
+      CONFIG._shakeDisabled = true;
+    }
+  },
+
+  // ── Canvas touch-to-world correto ────────────────────────
+  // Util.toWorld já usa offsetX/offsetY/scale — sem mudança necessária.
+  // Este método é um alias explícito para clareza futura.
+  touchToWorld(clientX, clientY) {
+    const r = canvas.getBoundingClientRect();
+    return Util.toWorld(clientX - r.left, clientY - r.top);
+  },
+
+  // ── Previne comportamentos padrão indesejados no mobile ──
+  preventDefaults() {
+    // Previne scroll/bounce ao arrastar na tela
+    document.addEventListener('touchmove', e => {
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+
+    // Previne zoom por double-tap no iOS
+    let lastTap = 0;
+    document.addEventListener('touchend', e => {
+      const now = Date.now();
+      if (now - lastTap < 300) e.preventDefault();
+      lastTap = now;
+    }, { passive: false });
+
+    // Previne menu de contexto longo-pressionar
+    document.addEventListener('contextmenu', e => e.preventDefault());
+  },
+
+  // ── HUD canvas: texto compacto no mobile ─────────────────
+  // Retorna tamanho de fonte ajustado para mobile.
+  hudFontSize(base) {
+    if (!MobileDetect.isMobile) return base;
+    return Math.round(base * 0.82);
+  },
+
+  init() {
+    this.preventDefaults();
+    this.applyMobilePerf();
+    // Dispara um resize imediato para garantir que o canvas
+    // ocupe 100% da área visual correta após load.
+    setTimeout(resizeCanvas, 50);
+    setTimeout(resizeCanvas, 300);
+  },
+};
+
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
@@ -7872,6 +8152,7 @@ EnergySystem.init();
 MatchModifiers.init();
 MultiplayerSystem.init();
 AnchorMode.init();
+MobileExperience.init();
 requestAnimationFrame(ts => { Game.lastTime = ts; Game.loop(ts); });
 </script>
 </body>
