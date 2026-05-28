@@ -1252,6 +1252,126 @@
     text-shadow: 0 0 8px rgba(255,60,200,0.7);
     box-shadow: 0 0 16px rgba(255,60,200,0.25);
   }
+
+  /* ═══════════════════════════════════════════════════════════
+     MODO ÂNCORA — estilos DOM
+  ══════════════════════════════════════════════════════════ */
+
+  /* HUD container do Modo Âncora */
+  #anchorHUD {
+    position: fixed;
+    bottom: 220px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 310;
+    pointer-events: none;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 220px;
+  }
+  #anchorHUD.visible { display: flex; }
+
+  /* Badge "MODO ÂNCORA" */
+  #anchorBadge {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.22em;
+    color: #ff8800;
+    text-shadow: 0 0 14px rgba(255,130,0,0.9), 0 0 28px rgba(255,80,0,0.5);
+    animation: anchorPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes anchorPulse {
+    0%,100% { text-shadow: 0 0 14px rgba(255,130,0,0.9), 0 0 28px rgba(255,80,0,0.5); }
+    50%      { text-shadow: 0 0 24px rgba(255,160,0,1),   0 0 48px rgba(255,100,0,0.8); }
+  }
+
+  /* Barra de duração do Modo Âncora */
+  #anchorDurTrack {
+    width: 200px; height: 7px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(255,130,0,0.4);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  #anchorDurFill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff4400, #ffaa00);
+    box-shadow: 0 0 10px rgba(255,100,0,0.7);
+    border-radius: 4px;
+    transition: width 0.06s linear;
+  }
+
+  /* Barra de cooldown do Pulse Aniquilador */
+  #pulseTrack {
+    width: 200px; height: 5px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(0,200,255,0.3);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  #pulseFill {
+    height: 100%;
+    background: linear-gradient(90deg, #00c8ff, #00ffcc);
+    box-shadow: 0 0 8px rgba(0,200,255,0.6);
+    border-radius: 3px;
+    transition: width 0.06s linear;
+  }
+  #pulseLabel {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: rgba(0,200,255,0.65);
+  }
+
+  /* Cooldown do Modo Âncora (quando não ativo) */
+  #anchorCooldownBadge {
+    position: fixed;
+    bottom: 220px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 309;
+    pointer-events: none;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: rgba(255,130,0,0.5);
+    display: none;
+  }
+  #anchorCooldownBadge.visible { display: block; }
+
+  /* Botão mobile do Pulse Aniquilador */
+  #anchorPulseBtn {
+    position: fixed;
+    bottom: 120px;
+    right: 28px;
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,130,0,0.6);
+    background: rgba(255,80,0,0.10);
+    color: rgba(255,160,0,0.9);
+    font-size: 22px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: all;
+    cursor: pointer;
+    box-shadow: 0 0 18px rgba(255,100,0,0.25);
+    z-index: 320;
+    transition: background 0.1s, box-shadow 0.1s;
+  }
+  #anchorPulseBtn.visible { display: flex; }
+  #anchorPulseBtn:active {
+    background: rgba(255,100,0,0.30);
+    box-shadow: 0 0 32px rgba(255,130,0,0.55);
+  }
+  #anchorPulseBtn.ready {
+    border-color: rgba(0,200,255,0.7);
+    color: #00ffcc;
+    box-shadow: 0 0 22px rgba(0,200,255,0.4);
+  }
 </style>
 </head>
 <body>
@@ -1541,6 +1661,18 @@
   <span id="p2Label">P2</span>
   <span id="p2Lives">❤️❤️❤️</span>
 </div>
+
+<!-- ═══════════════════════════════════════════════════════
+     MODO ÂNCORA — DOM elements
+════════════════════════════════════════════════════════ -->
+<div id="anchorHUD">
+  <span id="anchorBadge">⚓ MODO ÂNCORA</span>
+  <div id="anchorDurTrack"><div id="anchorDurFill" style="width:100%"></div></div>
+  <span id="pulseLabel">PULSE ANIQUILADOR</span>
+  <div id="pulseTrack"><div id="pulseFill" style="width:100%"></div></div>
+</div>
+<div id="anchorCooldownBadge">⚓ ÂNCORA: RECARREGANDO</div>
+<button id="anchorPulseBtn" title="Pulse Aniquilador">💥</button>
 <!-- MOBILE CONTROLS — sempre presentes -->
 <div id="mobileControls">
   <div id="joystickZone">
@@ -1794,6 +1926,14 @@ const PlayerMovement = {
   // Chame uma vez por frame passando dt (segundos).
   // Atualiza Player.x e Player.y via aceleração + fricção.
   update(dt) {
+    // MODO ÂNCORA: player fixo — zera velocidade e bloqueia movimento.
+    // Rotação e tiro continuam sendo tratados em Player.update().
+    if (typeof AnchorMode !== 'undefined' && AnchorMode.active) {
+      this.vx = 0;
+      this.vy = 0;
+      return;
+    }
+
     // Quando dash está ativo, ele controla a posição diretamente.
     // Apenas sincronizamos a velocidade para uma transição suave.
     if (DashSystem.active) {
@@ -1953,9 +2093,18 @@ const Input = {
       } else if (e.code === 'KeyP') {
         Game.togglePause();
       }
-      // Ultimate (Q) and BlackHole (B)
+      // Ultimate (Q), BlackHole (B), Âncora (F), Pulse (G)
       if (e.code === 'KeyQ' && Game.state === 'playing') UltimateSystem.activate();
       if (e.code === 'KeyB' && Game.state === 'playing') BlackHoleSystem.activate();
+      if (e.code === 'KeyF' && Game.state === 'playing') {
+        if (typeof AnchorMode !== 'undefined') {
+          if (AnchorMode.active) AnchorMode.deactivate();
+          else AnchorMode.activate();
+        }
+      }
+      if (e.code === 'KeyG' && Game.state === 'playing') {
+        if (typeof AnchorMode !== 'undefined') AnchorMode.activatePulse();
+      }
       if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
     });
     window.addEventListener('keyup', e => {
@@ -2009,7 +2158,8 @@ const Player = {
     PlayerMovement.update(dt);
 
     // ── Rotação — independente do movimento ───────────────
-    // A nave sempre aponta para o mouse, sem interferência do WASD.
+    // No Modo Âncora: rotação livre por mouse/touch (movimento bloqueado).
+    // No modo normal: aponta para o mouse.
     this.angle = Math.atan2(Input.mouse.y - this.y, Input.mouse.x - this.x);
 
     // ── Tiro — modo configurável (mouse ou espaço) ──────────
@@ -2870,8 +3020,14 @@ const Mobile = {
         knob.style.left = (this._joyOrigin.x + kx - 24) + 'px';
         knob.style.top  = (this._joyOrigin.y + ky - 24) + 'px';
         this.joyVec.x = nx; this.joyVec.y = ny;
-        // Mirar na direção do joystick (só se P1 vivo)
-        if (Math.hypot(nx, ny) > 0.2 && !Player._dead) {
+        // Modo Âncora: joystick controla mira (rotação) em vez de movimento
+        if (typeof AnchorMode !== 'undefined' && AnchorMode.active) {
+          if (Math.hypot(nx, ny) > 0.08) {
+            Input.mouse.x = Player.x + nx * 120;
+            Input.mouse.y = Player.y + ny * 120;
+          }
+        } else if (Math.hypot(nx, ny) > 0.2 && !Player._dead) {
+          // Modo normal: mira na direção do joystick (só se P1 vivo)
           Input.mouse.x = Player.x + nx * 60;
           Input.mouse.y = Player.y + ny * 60;
         }
@@ -2947,6 +3103,7 @@ const Game = {
     ElectricSystem.reset();
     CriticalSystem.reset();
     MatchModifiers.reset();
+    AnchorMode.reset();
     EnergySystem.showBar(true);
     // Multiplayer reset
     MultiplayerSystem.reset();
@@ -3011,6 +3168,9 @@ const Game = {
     FloatText.update(gdt);
     Performance.clampPools();
 
+    // Anchor Mode
+    AnchorMode.update(gdt);
+
     // Expansion systems
     PortalSystem.update(gdt);
     DroneSystem.update(gdt);
@@ -3057,6 +3217,7 @@ const Game = {
         BossSystem.draw();
         DroneSystem.draw();
         ShieldSystem.draw();
+        AnchorMode.draw();           // aura âncora (atrás da nave)
         Player.draw();
         MultiplayerSystem.draw();    // P2 draw
         FloatText.draw();
@@ -3079,6 +3240,7 @@ const Game = {
         BossSystem.draw();
         DroneSystem.draw();
         ShieldSystem.draw();
+        AnchorMode.draw();           // aura âncora no pause também
         Player.draw();
         MultiplayerSystem.draw();    // P2 draw
         FloatText.draw();
@@ -4528,6 +4690,7 @@ const DashSystem = {
 
   tryDash(dirX, dirY) {
     if (this.active || this.cooldown > 0) return;
+    if (typeof AnchorMode !== 'undefined' && AnchorMode.active) return;
     if (Math.abs(dirX) < 0.01 && Math.abs(dirY) < 0.01) return;
     this.active = true;
     this.timer  = this.DASH_DURATION;
@@ -7288,6 +7451,399 @@ const MultiplayerSystem = {
   // Implementado direto no Player2.hit e via substituição abaixo.
 };
 
+
+// ═══════════════════════════════════════════════════════════
+//  MODO ÂNCORA — ANCHOR MODE SYSTEM
+//  Controle central de ativação, lógica, visual e HUD.
+// ═══════════════════════════════════════════════════════════
+
+// ── Configuração principal — edite aqui ──────────────────
+const ENABLE_ANCHOR_MODE = true;   // habilitar/desabilitar globalmente
+
+const ANCHOR_CONFIG = {
+  // Duração máxima de um ciclo de Modo Âncora (segundos)
+  DURATION:           8.0,
+
+  // Cooldown após sair do Modo Âncora (segundos)
+  COOLDOWN:          18.0,
+
+  // Número mínimo de inimigos próximos para auto-ativar
+  AUTO_ENEMY_COUNT:   5,
+
+  // Raio de detecção de inimigos próximos (px)
+  AUTO_ENEMY_RADIUS: 180,
+
+  // Vida mínima para auto-ativar (1 = apenas 1 coração)
+  AUTO_LOW_LIFE:      1,
+
+  // Cooldown do Pulse Aniquilador (segundos)
+  PULSE_COOLDOWN:    12.0,
+
+  // Custo de energia do Pulse (0 = sem custo)
+  PULSE_ENERGY_COST:  0,
+
+  // Raio da onda expansiva do Pulse (px)
+  PULSE_WAVE_RADIUS: CONFIG.TARGET_W * 0.75,
+};
+
+// ── ANCHOR MODE STATE ────────────────────────────────────
+const AnchorMode = {
+  // Estado
+  active:       false,
+  cooldown:     0,       // cooldown restante antes de poder ativar
+  duration:     0,       // duração restante do ciclo atual
+  pulseCooldown:0,       // cooldown do Pulse Aniquilador
+
+  // DOM refs
+  _hudEl:       null,
+  _durFillEl:   null,
+  _pulseFillEl: null,
+  _cdBadgeEl:   null,
+  _pulseBtnEl:  null,
+
+  // Efeito visual: onda expansiva do Pulse
+  _wave: null,           // { r, maxR, alpha } ou null
+
+  // Efeito: linhas orbitais de aura
+  _orbitAngle:  0,
+
+  // ── Inicialização ────────────────────────────────────────
+  init() {
+    this._hudEl       = document.getElementById('anchorHUD');
+    this._durFillEl   = document.getElementById('anchorDurFill');
+    this._pulseFillEl = document.getElementById('pulseFill');
+    this._cdBadgeEl   = document.getElementById('anchorCooldownBadge');
+    this._pulseBtnEl  = document.getElementById('anchorPulseBtn');
+
+    // Botão mobile do Pulse
+    if (this._pulseBtnEl) {
+      this._pulseBtnEl.addEventListener('click', () => this.activatePulse());
+      this._pulseBtnEl.addEventListener('touchend', e => {
+        e.preventDefault();
+        this.activatePulse();
+      }, { passive: false });
+    }
+
+    // Tecla F para ativar/desativar Modo Âncora manualmente
+    // (já capturada pelo Input._init via keydown global)
+  },
+
+  // ── Reset ao iniciar partida ─────────────────────────────
+  reset() {
+    this.active        = false;
+    this.cooldown      = 0;
+    this.duration      = 0;
+    this.pulseCooldown = 0;
+    this._wave         = null;
+    this._orbitAngle   = 0;
+    this._syncHUD();
+  },
+
+  // ── Ativar Modo Âncora ───────────────────────────────────
+  activate() {
+    if (!ENABLE_ANCHOR_MODE) return;
+    if (this.active || this.cooldown > 0) return;
+    if (Player._dead) return;
+
+    this.active   = true;
+    this.duration = ANCHOR_CONFIG.DURATION;
+
+    // Efeitos de entrada
+    ScreenFX.flash('rgba(255,100,0,0.28)', 0.5);
+    ScreenFX.shake(5, 0.3);
+    SlowMotion.trigger(0.45, 0.6);   // leve slow-mo cinematográfico na entrada
+    Particles.burst(Player.x, Player.y, 18, 'rgba(255,130,0,', 1.4);
+    FloatText.spawn(Player.x, Player.y - 40, '⚓ ÂNCORA!', '#ff8800', 20, 1.8);
+    SFX.play('shield_on');   // som de ativação sci-fi
+
+    this._syncHUD();
+  },
+
+  // ── Desativar Modo Âncora ────────────────────────────────
+  deactivate() {
+    if (!this.active) return;
+    this.active   = false;
+    this.cooldown = ANCHOR_CONFIG.COOLDOWN;
+    this.duration = 0;
+
+    ScreenFX.flash('rgba(255,60,0,0.15)', 0.3);
+    Particles.burst(Player.x, Player.y, 10, 'rgba(255,130,0,', 1.0);
+    FloatText.spawn(Player.x, Player.y - 30, 'ÂNCORA OFF', '#ff6600', 14, 1.2);
+
+    this._syncHUD();
+  },
+
+  // ── Pulse Aniquilador ────────────────────────────────────
+  activatePulse() {
+    if (!this.active) return;
+    if (this.pulseCooldown > 0) return;
+
+    this.pulseCooldown = ANCHOR_CONFIG.PULSE_COOLDOWN;
+
+    // Onda expansiva visual
+    this._wave = { r: 0, maxR: ANCHOR_CONFIG.PULSE_WAVE_RADIUS, alpha: 1.0 };
+
+    // Elimina todos os inimigos na tela
+    const killed = Enemies.pool.length;
+    Enemies.pool.forEach(e => {
+      Particles.burst(e.x, e.y, 12, 'rgba(255,150,0,', 1.8);
+      const sg = (CONFIG.SCORE_PER_KILL + (e.scoreBonus || 0)) * (CONFIG._scoreBoost || 1);
+      Game.score += sg;
+      DifficultySystem.kills++;
+      OverdriveSystem.onKill();
+    });
+    Enemies.pool.length = 0;
+
+    // Destrói projéteis inimigos
+    EnemyBullets.pool.length = 0;
+
+    // Dano significativo no boss (não o mata instantaneamente — mantém fair play)
+    if (BossSystem.boss) BossSystem.takeDamage(12);
+
+    // Efeitos cinematográficos
+    ScreenFX.shake(12, 0.6);
+    ScreenFX.flash('rgba(255,180,0,0.45)', 0.7);
+    SlowMotion.trigger(0.2, 1.0);
+
+    // Partículas massivas
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        const rx = Util.rand(0, CONFIG.TARGET_W);
+        const ry = Util.rand(0, CONFIG.TARGET_H);
+        Particles.burst(rx, ry, 14, 'rgba(255,160,0,', 2.0);
+      }, i * 80);
+    }
+
+    FloatText.spawn(Player.x, Player.y - 55, '★ PULSE ANIQUILADOR ★', '#ffaa00', 22, 2.5);
+    SFX.play('kill_boss');   // som épico de explosão
+
+    if (killed > 0) {
+      FloatText.spawn(Player.x, Player.y - 30, killed + ' eliminados!', '#ffdd00', 15, 1.5);
+    }
+
+    this._syncHUD();
+  },
+
+  // ── Auto-detecção de ativação ────────────────────────────
+  _shouldAutoActivate() {
+    if (!ENABLE_ANCHOR_MODE) return false;
+    if (this.active || this.cooldown > 0) return false;
+    if (Player._dead) return false;
+
+    // Condição 1: vida muito baixa
+    if (Player.lives <= ANCHOR_CONFIG.AUTO_LOW_LIFE) return true;
+
+    // Condição 2: muitos inimigos próximos
+    let nearCount = 0;
+    for (const e of Enemies.pool) {
+      if (Util.dist(e, Player) < ANCHOR_CONFIG.AUTO_ENEMY_RADIUS) {
+        nearCount++;
+        if (nearCount >= ANCHOR_CONFIG.AUTO_ENEMY_COUNT) return true;
+      }
+    }
+
+    return false;
+  },
+
+  // ── Update (chamado todo frame) ──────────────────────────
+  update(dt) {
+    if (!ENABLE_ANCHOR_MODE) return;
+
+    // Decrementar timers
+    if (this.cooldown      > 0) this.cooldown      = Math.max(0, this.cooldown - dt);
+    if (this.pulseCooldown > 0) this.pulseCooldown = Math.max(0, this.pulseCooldown - dt);
+
+    // Auto-ativação
+    if (this._shouldAutoActivate()) this.activate();
+
+    if (this.active) {
+      this.duration -= dt;
+      this._orbitAngle += dt * 2.2;
+
+      // Expiração do modo
+      if (this.duration <= 0) this.deactivate();
+
+      // Partículas de aura periódicas
+      if (Math.random() < 0.18) {
+        const a = Math.random() * Math.PI * 2;
+        const r = CONFIG.PLAYER_SIZE + Util.rand(8, 20);
+        Particles.burst(
+          Player.x + Math.cos(a) * r,
+          Player.y + Math.sin(a) * r,
+          1, 'rgba(255,130,0,', 0.7
+        );
+      }
+    }
+
+    // Onda expansiva do Pulse
+    if (this._wave) {
+      this._wave.r     += 600 * dt;
+      this._wave.alpha -= 1.4 * dt;
+      if (this._wave.alpha <= 0 || this._wave.r >= this._wave.maxR) this._wave = null;
+    }
+
+    this._syncHUD();
+  },
+
+  // ── Sincroniza HUD ────────────────────────────────────────
+  _syncHUD() {
+    if (!this._hudEl) return;
+
+    const show = this.active;
+    this._hudEl.classList.toggle('visible', show);
+
+    // Cooldown badge (quando não ativo mas em cooldown)
+    if (this._cdBadgeEl) {
+      this._cdBadgeEl.classList.toggle('visible', !show && this.cooldown > 0);
+    }
+
+    if (show) {
+      // Barra de duração
+      if (this._durFillEl) {
+        const durPct = Math.max(0, this.duration / ANCHOR_CONFIG.DURATION * 100);
+        this._durFillEl.style.width = durPct + '%';
+        this._durFillEl.style.background = durPct > 40
+          ? 'linear-gradient(90deg,#ff4400,#ffaa00)'
+          : 'linear-gradient(90deg,#ff0000,#ff4400)';
+      }
+      // Barra do Pulse
+      if (this._pulseFillEl) {
+        const pulsePct = this.pulseCooldown > 0
+          ? Math.max(0, (1 - this.pulseCooldown / ANCHOR_CONFIG.PULSE_COOLDOWN) * 100)
+          : 100;
+        this._pulseFillEl.style.width = pulsePct + '%';
+      }
+      // Botão mobile
+      if (this._pulseBtnEl) {
+        this._pulseBtnEl.classList.add('visible');
+        this._pulseBtnEl.classList.toggle('ready', this.pulseCooldown <= 0);
+        this._pulseBtnEl.textContent = this.pulseCooldown > 0
+          ? Math.ceil(this.pulseCooldown) + 's' : '💥';
+      }
+    } else {
+      if (this._pulseBtnEl) this._pulseBtnEl.classList.remove('visible');
+    }
+  },
+
+  // ── Draw no canvas ───────────────────────────────────────
+  draw() {
+    if (!ENABLE_ANCHOR_MODE) return;
+
+    // Onda expansiva do Pulse
+    if (this._wave) {
+      ctx.save();
+      const w = this._wave;
+      // Anel primário
+      ctx.beginPath();
+      ctx.arc(Player.x, Player.y, w.r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,180,0,${w.alpha * 0.9})`;
+      ctx.shadowColor  = 'rgba(255,150,0,0.9)';
+      ctx.shadowBlur   = 28;
+      ctx.lineWidth    = 4;
+      ctx.stroke();
+      // Anel interno
+      if (w.r > 30) {
+        ctx.beginPath();
+        ctx.arc(Player.x, Player.y, w.r * 0.55, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255,220,0,${w.alpha * 0.5})`;
+        ctx.lineWidth   = 2;
+        ctx.shadowBlur  = 12;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Aura do Modo Âncora (só quando ativo)
+    if (!this.active) return;
+
+    const now = performance.now() / 1000;
+    const px  = Player.x, py = Player.y;
+    const ps  = CONFIG.PLAYER_SIZE;
+
+    ctx.save();
+
+    // ── Halo radial base ────────────────────────────────────
+    const pulse    = 1 + Math.sin(now * 4) * 0.15;
+    const haloR    = ps * 2.8 * pulse;
+    const haloGrad = ctx.createRadialGradient(px, py, ps * 0.5, px, py, haloR);
+    haloGrad.addColorStop(0, `rgba(255,130,0,${0.22 * pulse})`);
+    haloGrad.addColorStop(0.5, `rgba(255,60,0,0.10)`);
+    haloGrad.addColorStop(1,  'rgba(255,0,0,0)');
+    ctx.beginPath();
+    ctx.arc(px, py, haloR, 0, Math.PI * 2);
+    ctx.fillStyle = haloGrad;
+    ctx.fill();
+
+    // ── Linhas orbitais (4 linhas girando) ──────────────────
+    const lineCount = 4;
+    for (let i = 0; i < lineCount; i++) {
+      const a    = this._orbitAngle + (Math.PI * 2 / lineCount) * i;
+      const r1   = ps * 1.6;
+      const r2   = ps * 2.6 + Math.sin(now * 3 + i) * 5;
+      const lx1  = px + Math.cos(a) * r1;
+      const ly1  = py + Math.sin(a) * r1;
+      const lx2  = px + Math.cos(a) * r2;
+      const ly2  = py + Math.sin(a) * r2;
+      const alph = 0.5 + Math.sin(now * 5 + i * 1.3) * 0.3;
+
+      ctx.beginPath();
+      ctx.moveTo(lx1, ly1);
+      ctx.lineTo(lx2, ly2);
+      ctx.strokeStyle = `rgba(255,160,40,${alph})`;
+      ctx.shadowColor  = 'rgba(255,120,0,0.9)';
+      ctx.shadowBlur   = 10;
+      ctx.lineWidth    = 2.5;
+      ctx.lineCap      = 'round';
+      ctx.stroke();
+
+      // Ponto nas extremidades
+      ctx.beginPath();
+      ctx.arc(lx2, ly2, 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,200,0,${alph})`;
+      ctx.shadowBlur = 8;
+      ctx.fill();
+    }
+
+    // ── Anel energético central ──────────────────────────────
+    const ringR   = ps * 1.35 + Math.sin(now * 6) * 3;
+    const ringAlp = 0.6 + Math.sin(now * 8) * 0.2;
+    ctx.beginPath();
+    ctx.arc(px, py, ringR, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,140,0,${ringAlp})`;
+    ctx.shadowColor  = 'rgba(255,100,0,0.95)';
+    ctx.shadowBlur   = 18;
+    ctx.lineWidth    = 2;
+    ctx.stroke();
+
+    // ── Duração restante como arco ao redor do player ───────
+    const durFrac = Math.max(0, this.duration / ANCHOR_CONFIG.DURATION);
+    ctx.beginPath();
+    ctx.arc(px, py, ps * 1.8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * durFrac);
+    ctx.strokeStyle = durFrac > 0.4
+      ? `rgba(255,180,0,0.85)` : `rgba(255,60,0,0.85)`;
+    ctx.shadowColor  = 'rgba(255,120,0,0.8)';
+    ctx.shadowBlur   = 12;
+    ctx.lineWidth    = 3;
+    ctx.stroke();
+
+    // ── Ícone âncora (canvas text) ───────────────────────────
+    ctx.font         = '12px serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle    = `rgba(255,180,0,${0.6 + Math.sin(now * 3) * 0.3})`;
+    ctx.shadowColor  = 'rgba(255,130,0,0.9)';
+    ctx.shadowBlur   = 10;
+    ctx.fillText('⚓', px - 1, py - ps * 2.8 - 8);
+
+    ctx.restore();
+  },
+};
+
+// ── ANCHOR MOVEMENT BLOCK ────────────────────────────────
+// Integrado ao PlayerMovement.update via flag AnchorMode.active.
+// Quando ativo: bloqueia deslocamento, mantém rotação livre.
+// (Veja patch em PlayerMovement.update abaixo)
+
 // ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
@@ -7315,8 +7871,8 @@ SettingsUI.init();
 EnergySystem.init();
 MatchModifiers.init();
 MultiplayerSystem.init();
+AnchorMode.init();
 requestAnimationFrame(ts => { Game.lastTime = ts; Game.loop(ts); });
 </script>
 </body>
 </html>
-<!-- TESTE GITHUB -->
