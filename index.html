@@ -8364,24 +8364,30 @@ const SupabaseSystem = {
 
   // ── Salva o recorde no banco ─────────────────────────────
   async saveRecord(score, tempo) {
-    alert('saveRecord chamado! score=' + score + ' tempo=' + tempo + ' nome=' + this._playerName);
     if (!this._initialized || score <= 0) return;
-    alert('Tentando salvar no Supabase...');
     try {
-      const { data, error } = await this._client.from(this._table).insert({
-        nome:  this._playerName,
-        score: Math.floor(score),
-        tempo: parseFloat(tempo.toFixed(2)),
+      const response = await fetch(this._URL + '/rest/v1/recordes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': this._KEY,
+          'Authorization': 'Bearer ' + this._KEY,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({
+          nome:  this._playerName,
+          score: Math.floor(score),
+          tempo: parseFloat(tempo.toFixed(2)),
+        }),
       });
-      if (error) {
-        alert('Erro Supabase: ' + JSON.stringify(error));
+      if (!response.ok) {
+        const err = await response.text();
+        alert('Erro ao salvar: ' + err);
       } else {
-        alert('Salvo com sucesso!');
+        await this.loadRanking();
       }
-      await this.loadRanking();
     } catch (e) {
-      console.error('Erro ao salvar recorde:', e);
-      alert('Erro ao salvar: ' + JSON.stringify(e));
+      alert('Erro de rede: ' + e.message);
     }
   },
 
@@ -8389,12 +8395,18 @@ const SupabaseSystem = {
   async loadRanking() {
     if (!this._initialized) return;
     try {
-      const { data } = await this._client
-        .from(this._table)
-        .select('nome, score, tempo')
-        .order('score', { ascending: false })
-        .limit(10);
-      this._ranking = data || [];
+      const response = await fetch(
+        this._URL + '/rest/v1/recordes?select=nome,score,tempo&order=score.desc&limit=10',
+        {
+          headers: {
+            'apikey': this._KEY,
+            'Authorization': 'Bearer ' + this._KEY,
+          },
+        }
+      );
+      if (response.ok) {
+        this._ranking = await response.json();
+      }
     } catch (e) {
       console.warn('Erro ao carregar ranking:', e);
     }
