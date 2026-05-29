@@ -2952,6 +2952,32 @@ const UI = {
     ctx.fillText('VIDAS', CONFIG.TARGET_W - pad, pad + 24);
 
     ctx.restore();
+
+    // --- Vidas overlay mobile: desenhado FORA do transform do canvas ---
+    // Garante que os corações apareçam em qualquer escala/offset mobile.
+    if (MobileDetect.isMobile) {
+      ctx.save();
+      // Zera qualquer transform ativo — coordenadas de tela física real
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      // Calcula posição em pixels de tela reais
+      const heartFontSize = Math.round(20 * scale);
+      const hx = canvas.width  - Math.round(16 * scale);
+      const hy = Math.round(offsetY > 0 ? offsetY + 10 * scale : 10 * scale);
+      ctx.font         = heartFontSize + 'px serif';
+      ctx.textAlign    = 'right';
+      ctx.textBaseline = 'top';
+      ctx.globalAlpha  = 1.0;
+      ctx.shadowColor  = '#ff4466';
+      ctx.shadowBlur   = Math.round(10 * scale);
+      ctx.fillText(heartsStr, hx, hy);
+      // label VIDAS
+      const labelSize = Math.max(9, Math.round(11 * scale));
+      ctx.font         = labelSize + 'px "Courier New"';
+      ctx.fillStyle    = 'rgba(0,200,255,0.6)';
+      ctx.shadowBlur   = 0;
+      ctx.fillText('VIDAS', hx, hy + heartFontSize + 2);
+      ctx.restore();
+    }
   },
 
   drawArena() {
