@@ -155,7 +155,7 @@
     #shopOpenBtn { font-size: 11px; padding: 6px 12px; top: max(8px, env(safe-area-inset-top,8px)); left: max(8px, env(safe-area-inset-left,8px)); }
 
     /* Settings btn abaixo do mpToggleBtn, ambos acima dos controles móveis */
-    #settingsBtn { bottom: max(168px, calc(28vmin + env(safe-area-inset-bottom,0px) + 8px)); font-size: 10px; padding: 6px 14px; }
+    #settingsBtn { bottom: 16px; font-size: 10px; padding: 6px 14px; }
 
     /* MP toggle btn acima do settingsBtn, abaixo do botão PLAY */
     #mpToggleBtn { bottom: 56px; font-size: 10px; padding: 6px 14px; }
@@ -3006,7 +3006,7 @@ const UI = {
     ctx.font      = '12px "Courier New"';
     ctx.fillStyle = 'rgba(0,200,255,0.4)';
     ctx.shadowBlur = 0;
-    ctx.fillText('WASD mover · Mouse mirar · Clique atirar · P pausar', cx, CONFIG.TARGET_H - 30);
+    ctx.fillText('WASD mover · Mouse mirar · Clique atirar · P pausar', cx, CONFIG.TARGET_H - 120);
 
     ctx.restore();
 
