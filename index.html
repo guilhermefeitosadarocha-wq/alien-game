@@ -8357,9 +8357,9 @@ const SupabaseSystem = {
     if (!this._initialized || score <= 0) return;
     try {
       await this._client.from(this._table).insert({
-        nome:        this._playerName,
-        pontuacao:   Math.floor(score),
-        tempo:       parseFloat(tempo.toFixed(2)),
+        nome:  this._playerName,
+        score: Math.floor(score),
+        tempo: parseFloat(tempo.toFixed(2)),
       });
       await this.loadRanking();
     } catch (e) {
@@ -8373,8 +8373,8 @@ const SupabaseSystem = {
     try {
       const { data } = await this._client
         .from(this._table)
-        .select('nome, pontuacao, tempo')
-        .order('pontuacao', { ascending: false })
+        .select('nome, score, tempo')
+        .order('score', { ascending: false })
         .limit(10);
       this._ranking = data || [];
     } catch (e) {
