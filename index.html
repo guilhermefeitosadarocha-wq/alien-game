@@ -8355,6 +8355,7 @@ const SupabaseSystem = {
 
   // ── Salva o recorde no banco ─────────────────────────────
   async saveRecord(score, tempo) {
+    alert('saveRecord chamado! score=' + score + ' tempo=' + tempo + ' nome=' + this._playerName);
     if (!this._initialized || score <= 0) return;
     try {
       await this._client.from(this._table).insert({
