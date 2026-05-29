@@ -8348,7 +8348,12 @@ const SupabaseSystem = {
 
   init() {
     try {
-      this._client = supabase.createClient(this._URL, this._KEY);
+      this._client = supabase.createClient(this._URL, this._KEY, {
+        auth: { persistSession: false },
+        global: {
+          headers: { 'Content-Type': 'application/json' },
+        },
+      });
       this._initialized = true;
       this.loadRanking();
     } catch (e) {
@@ -8361,6 +8366,7 @@ const SupabaseSystem = {
   async saveRecord(score, tempo) {
     alert('saveRecord chamado! score=' + score + ' tempo=' + tempo + ' nome=' + this._playerName);
     if (!this._initialized || score <= 0) return;
+    alert('Tentando salvar no Supabase...');
     try {
       const { data, error } = await this._client.from(this._table).insert({
         nome:  this._playerName,
