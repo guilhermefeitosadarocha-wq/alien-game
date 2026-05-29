@@ -8348,17 +8348,14 @@ const SupabaseSystem = {
 
   init() {
     try {
-      this._client = supabase.createClient(this._URL, this._KEY, {
-        auth: { persistSession: false },
-        global: {
-          headers: { 'Content-Type': 'application/json' },
-        },
-      });
+      this._client = supabase.createClient(
+        'https://xasgwdhartnrivgrzv ri.supabase.co',
+        this._KEY
+      );
       this._initialized = true;
       this.loadRanking();
     } catch (e) {
-      console.error('Supabase não inicializado:', e);
-      alert('Erro ao inicializar Supabase: ' + JSON.stringify(e));
+      console.warn('Supabase erro:', e);
     }
   },
 
@@ -8366,14 +8363,17 @@ const SupabaseSystem = {
   async saveRecord(score, tempo) {
     if (!this._initialized || score <= 0) return;
     try {
-      const response = await fetch(this._URL + '/rest/v1/recordes', {
+      const url = 'https://xasgwdhartnrivgrzv ri.supabase.co/rest/v1/recordes';
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': this._KEY,
           'Authorization': 'Bearer ' + this._KEY,
           'Prefer': 'return=minimal',
+          'Access-Control-Allow-Origin': '*',
         },
+        mode: 'cors',
         body: JSON.stringify({
           nome:  this._playerName,
           score: Math.floor(score),
@@ -8382,12 +8382,13 @@ const SupabaseSystem = {
       });
       if (!response.ok) {
         const err = await response.text();
-        alert('Erro ao salvar: ' + err);
+        alert('Erro: ' + response.status + ' - ' + err);
       } else {
+        alert('Salvo!');
         await this.loadRanking();
       }
     } catch (e) {
-      alert('Erro de rede: ' + e.message);
+      alert('Erro: ' + e.message);
     }
   },
 
