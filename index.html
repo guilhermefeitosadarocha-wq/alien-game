@@ -1606,6 +1606,7 @@
       <button class="settings-tab" data-tab="audio">ÁUDIO</button>
       <button class="settings-tab" data-tab="visual">VISUAL</button>
       <button class="settings-tab" data-tab="mobile">MOBILE</button>
+      <button class="settings-tab" data-tab="graficos">🎨 GRÁFICOS</button>
     </div>
 
     <div id="settingsBody">
@@ -1749,6 +1750,45 @@
           </div>
         </div>
       </div>
+
+      <div class="settings-section" data-section="graficos">
+  <p class="settings-section-title">QUALIDADE GRÁFICA</p>
+  <div class="settings-row">
+    <span class="settings-row-label">Qualidade
+      <span class="settings-row-sub">Afeta partículas e sombras</span>
+    </span>
+    <div class="settings-radio-group" id="graphicsQuality">
+      <button class="settings-radio-btn" data-value="low">BAIXO</button>
+      <button class="settings-radio-btn active" data-value="medium">MÉDIO</button>
+      <button class="settings-radio-btn" data-value="high">ALTO</button>
+    </div>
+  </div>
+  <div class="settings-row">
+    <span class="settings-row-label">Sombras neon
+      <span class="settings-row-sub">shadowBlur nos elementos</span>
+    </span>
+    <label class="settings-toggle">
+      <input type="checkbox" id="shadowsToggle" checked>
+      <div class="toggle-track"></div>
+    </label>
+  </div>
+  <div class="settings-row">
+    <span class="settings-row-label">Partículas máximas</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <input type="range" class="settings-slider" id="maxParticles" min="50" max="280" value="220">
+      <span class="slider-val" id="maxParticlesVal">220</span>
+    </div>
+  </div>
+  <div class="settings-row">
+    <span class="settings-row-label">FPS alvo
+      <span class="settings-row-sub">Limita o loop do jogo</span>
+    </span>
+    <div class="settings-radio-group" id="targetFPS">
+      <button class="settings-radio-btn" data-value="30">30</button>
+      <button class="settings-radio-btn active" data-value="60">60</button>
+    </div>
+  </div>
+</div>
 
     </div><!-- /settingsBody -->
   </div><!-- /settingsPanel -->
@@ -2138,7 +2178,7 @@ const PlayerMovement = {
 // ═══════════════════════════════════════════════════════════
 const CONFIG = {
   TARGET_W: 800,
-  TARGET_H: 600,
+  TARGET_H: 780,
   PLAYER_SPEED: 220,
   PLAYER_SIZE: 14,
   PLAYER_LIVES: 3,
@@ -2557,15 +2597,11 @@ const Enemies = {
   },
 
   _randomEdge() {
-    const side = Math.floor(Math.random() * 4);
-    const W = CONFIG.TARGET_W, H = CONFIG.TARGET_H;
-    const pad = 30;
-    switch (side) {
-      case 0: return { x: Util.rand(0, W), y: -pad };
-      case 1: return { x: W + pad,          y: Util.rand(0, H) };
-      case 2: return { x: Util.rand(0, W), y: H + pad };
-      case 3: return { x: -pad,             y: Util.rand(0, H) };
-    }
+    const pad = 60;
+    return {
+      x: Util.rand(pad, CONFIG.TARGET_W - pad),
+      y: Util.rand(pad, CONFIG.TARGET_H - pad),
+    };
   },
 
   update(dt) {
@@ -2902,7 +2938,9 @@ const UI = {
     for (let i = 0; i < CONFIG.PLAYER_LIVES; i++) {
       heartsStr += i < Player.lives ? '❤️' : '🖤';
     }
+    ctx.globalAlpha = 1.0;
     ctx.fillText(heartsStr, CONFIG.TARGET_W - pad, pad - 2);
+    ctx.globalAlpha = 1.0;
 
     // label
     ctx.font      = '11px "Courier New"';
@@ -6025,6 +6063,65 @@ const SettingsUI = {
       this._setRadioGroup('shootBtnPos', btn.dataset.value);
       ControlSettings.data.shootBtnBottom = val;
       MobileSettings.apply(ControlSettings.data);
+      SaveSystem.save(ControlSettings.data);
+      this.flashSaved();
+    });
+
+    // Qualidade gráfica
+    document.getElementById('graphicsQuality').addEventListener('click', e => {
+      const btn = e.target.closest('.settings-radio-btn');
+      if (!btn) return;
+      const val = btn.dataset.value;
+      this._setRadioGroup('graphicsQuality', val);
+      if (val === 'low') {
+        Performance.MAX_PARTICLES = 80;
+        Performance.MAX_BULLETS   = 60;
+        CONFIG._glowBonus         = 0;
+        CONFIG._shakeDisabled     = true;
+        CONFIG._flashDisabled     = true;
+      } else if (val === 'medium') {
+        Performance.MAX_PARTICLES = 150;
+        Performance.MAX_BULLETS   = 100;
+        CONFIG._glowBonus         = 0;
+        CONFIG._shakeDisabled     = false;
+        CONFIG._flashDisabled     = false;
+      } else if (val === 'high') {
+        Performance.MAX_PARTICLES = 280;
+        Performance.MAX_BULLETS   = 120;
+        CONFIG._glowBonus         = 10;
+        CONFIG._shakeDisabled     = false;
+        CONFIG._flashDisabled     = false;
+      }
+      SaveSystem.save(ControlSettings.data);
+      this.flashSaved();
+    });
+
+    // Sombras toggle
+    document.getElementById('shadowsToggle').addEventListener('change', e => {
+      CONFIG._shadowsDisabled = !e.target.checked;
+      SaveSystem.save(ControlSettings.data);
+      this.flashSaved();
+    });
+
+    // Partículas máximas slider
+    const maxPEl = document.getElementById('maxParticles');
+    const maxPValEl = document.getElementById('maxParticlesVal');
+    if (maxPEl) {
+      maxPEl.addEventListener('input', () => {
+        const v = parseInt(maxPEl.value);
+        maxPValEl.textContent = v;
+        Performance.MAX_PARTICLES = v;
+        SaveSystem.save(ControlSettings.data);
+        this.flashSaved();
+      });
+    }
+
+    // FPS alvo
+    document.getElementById('targetFPS').addEventListener('click', e => {
+      const btn = e.target.closest('.settings-radio-btn');
+      if (!btn) return;
+      this._setRadioGroup('targetFPS', btn.dataset.value);
+      CONFIG._targetFPS = parseInt(btn.dataset.value);
       SaveSystem.save(ControlSettings.data);
       this.flashSaved();
     });
