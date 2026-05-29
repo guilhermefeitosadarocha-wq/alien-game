@@ -8349,7 +8349,7 @@ const SupabaseSystem = {
   init() {
     try {
       this._client = supabase.createClient(
-        'https://xasgwdhartnrivgrzv ri.supabase.co',
+        this._URL,
         this._KEY
       );
       this._initialized = true;
@@ -8362,7 +8362,7 @@ const SupabaseSystem = {
   // ── Salva o recorde no banco ─────────────────────────────
   saveRecord(score, tempo) {
     if (!this._initialized || score <= 0) return;
-    const url = 'https://xasgwdhartnrivgrzv ri.supabase.co/rest/v1/recordes';
+    const url = this._URL + '/rest/v1/recordes';
     const data = JSON.stringify({
       nome:  this._playerName,
       score: Math.floor(score),
