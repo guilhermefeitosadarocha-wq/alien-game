@@ -157,8 +157,8 @@
     /* Settings btn abaixo do mpToggleBtn, ambos acima dos controles móveis */
     #settingsBtn { bottom: max(168px, calc(28vmin + env(safe-area-inset-bottom,0px) + 8px)); font-size: 10px; padding: 6px 14px; }
 
-    /* MP toggle btn acima do settingsBtn — 60px de separação entre centros */
-    #mpToggleBtn { bottom: max(228px, calc(28vmin + env(safe-area-inset-bottom,0px) + 68px)); font-size: 10px; padding: 6px 14px; }
+    /* MP toggle btn acima do settingsBtn, abaixo do botão PLAY */
+    #mpToggleBtn { bottom: max(220px, calc(28vmin + env(safe-area-inset-bottom,0px) + 60px)); font-size: 10px; padding: 6px 14px; }
 
     /* Diff badge menor */
     #diffBadge { font-size: 9px; top: max(48px, calc(env(safe-area-inset-top,0px) + 46px)); right: max(8px, env(safe-area-inset-right,8px)); }
@@ -1350,7 +1350,7 @@
   }
   #mpToggleBtn {
     position: fixed;
-    bottom: 180px; left: 50%; transform: translateX(-50%);
+    bottom: 140px; left: 50%; transform: translateX(-50%);
     z-index: 201;
     background: rgba(0,10,20,0.82);
     border: 1.5px solid rgba(255,80,200,0.45);
