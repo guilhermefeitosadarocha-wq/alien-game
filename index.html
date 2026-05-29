@@ -2770,7 +2770,7 @@ const Collision = {
               Particles.burst(ex, ey, 10, 'rgba(150,80,255,', 1.3);
             }
             if ((e.coinBonus || 0) > 0) CoinSystem.add(e.coinBonus);
-            FloatText.spawn(ex, ey - eSize - 8, '+' + scoreGain, '#00c8ff', 14, 0.9);
+            FloatText.spawn(Player.x, Player.y - 30, '+' + scoreGain, '#00c8ff', 14, 0.9);
             ScreenFX.shake(eSize > 25 ? 5 : 2, 0.12);
             // SFX diferenciado por tipo de inimigo
             if (e.type === 'tank')          SFX.play('kill_tank');
@@ -4868,7 +4868,7 @@ const ComboSystem = {
       const bonus = Math.floor(CONFIG.SCORE_PER_KILL * (this.multiplier - 1));
       if (bonus > 0) {
         Game.score += bonus;
-        FloatText.spawn(x, y - 28, '+' + bonus, '#ffdd00', 16, 1.0);
+        FloatText.spawn(Player.x, Player.y - 30, '+' + bonus, '#ffdd00', 16, 1.0);
       }
     }
     this._syncDOM();
@@ -6926,7 +6926,7 @@ const CriticalSystem = {
     const chance = this.baseChance + (CONFIG._critChance || 0);
     if (chance <= 0 || Math.random() > chance) return baseScore;
     const bonus = baseScore * 2;
-    FloatText.spawn(x, y - 18, 'CRIT! +' + bonus, '#ffdd00', 18, 1.0);
+    FloatText.spawn(Player.x, Player.y - 30, 'CRIT! +' + bonus, '#ffdd00', 18, 1.0);
     Particles.burst(x, y, 8, 'rgba(255,200,0,', 1.2);
     return bonus;
   },
