@@ -8362,11 +8362,16 @@ const SupabaseSystem = {
     alert('saveRecord chamado! score=' + score + ' tempo=' + tempo + ' nome=' + this._playerName);
     if (!this._initialized || score <= 0) return;
     try {
-      await this._client.from(this._table).insert({
+      const { data, error } = await this._client.from(this._table).insert({
         nome:  this._playerName,
         score: Math.floor(score),
         tempo: parseFloat(tempo.toFixed(2)),
       });
+      if (error) {
+        alert('Erro Supabase: ' + JSON.stringify(error));
+      } else {
+        alert('Salvo com sucesso!');
+      }
       await this.loadRanking();
     } catch (e) {
       console.error('Erro ao salvar recorde:', e);
