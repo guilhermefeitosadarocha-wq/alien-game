@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
 <title>NEON SIEGE</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -3423,6 +3424,7 @@ const Game = {
     this.state = 'gameover';
     HighScoreSystem.check(this.score, this.elapsed);
     HighScoreSystem.save();
+    SupabaseSystem.saveRecord(this.score, this.elapsed);
     Bullets.clear();
     EnemyBullets.clear();
     ComboSystem.reset();
@@ -3561,6 +3563,7 @@ const Game = {
         Enemies.draw();
         UI.drawHUD();
         UI.drawGameOver();
+        SupabaseSystem.drawRanking();
         break;
     }
 
@@ -7348,6 +7351,10 @@ const MatchModifiers = {
       list.appendChild(row);
     });
     document.getElementById('modifierStartBtn').addEventListener('click', () => {
+      const nome = prompt('Digite seu nome para o ranking:', SupabaseSystem._playerName);
+      if (nome && nome.trim().length > 0) {
+        SupabaseSystem._playerName = nome.trim().slice(0, 20);
+      }
       this.applySelected();
       this._overlay.classList.remove('visible');
       SFX.play('game_start');
@@ -8323,6 +8330,101 @@ const MobileExperience = {
 };
 
 // ═══════════════════════════════════════════════════════════
+//  SUPABASE RANKING SYSTEM
+//  Integração com banco de dados para ranking global.
+// ═══════════════════════════════════════════════════════════
+const SupabaseSystem = {
+  _client: null,
+  _table:  'recordes',
+  _URL:    'https://xasgwdhartnrivgrzv ri.supabase.co',
+  _KEY:    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhhc2d3ZGhhcnRucml2Z3J6dnJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzM0MjYsImV4cCI6MjA5NTY0OTQyNn0.Ya_X3kcPcAUWiauZdwVSFtZORx6jwcZOG7g8pjznbyQ',
+  _ranking: [],
+  _playerName: 'Jogador',
+  _initialized: false,
+
+  init() {
+    try {
+      this._client = supabase.createClient(this._URL, this._KEY);
+      this._initialized = true;
+      this.loadRanking();
+    } catch (e) {
+      console.warn('Supabase não inicializado:', e);
+    }
+  },
+
+  // ── Salva o recorde no banco ─────────────────────────────
+  async saveRecord(score, tempo) {
+    if (!this._initialized || score <= 0) return;
+    try {
+      await this._client.from(this._table).insert({
+        nome:  this._playerName,
+        score: Math.floor(score),
+        tempo: parseFloat(tempo.toFixed(2)),
+      });
+      await this.loadRanking();
+    } catch (e) {
+      console.warn('Erro ao salvar recorde:', e);
+    }
+  },
+
+  // ── Carrega o ranking do banco ───────────────────────────
+  async loadRanking() {
+    if (!this._initialized) return;
+    try {
+      const { data } = await this._client
+        .from(this._table)
+        .select('nome, score, tempo')
+        .order('score', { ascending: false })
+        .limit(10);
+      this._ranking = data || [];
+    } catch (e) {
+      console.warn('Erro ao carregar ranking:', e);
+    }
+  },
+
+  // ── Formata tempo em mm:ss ───────────────────────────────
+  _formatTime(s) {
+    const m   = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+  },
+
+  // ── Desenha o ranking na tela de game over ───────────────
+  drawRanking() {
+    if (!this._initialized || this._ranking.length === 0) return;
+    const cx  = CONFIG.TARGET_W / 2;
+    const startY = CONFIG.TARGET_H / 2 + 70;
+
+    ctx.save();
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'top';
+
+    // Título do ranking
+    ctx.font        = 'bold 13px "Courier New"';
+    ctx.fillStyle   = '#00c8ff';
+    ctx.shadowColor = '#00c8ff';
+    ctx.shadowBlur  = 10;
+    ctx.fillText('◈ RANKING GLOBAL ◈', cx, startY);
+
+    // Lista top 10
+    this._ranking.forEach((r, i) => {
+      const y       = startY + 20 + i * 18;
+      const isPlayer = r.nome === this._playerName;
+      ctx.font      = '11px "Courier New"';
+      ctx.fillStyle = isPlayer ? '#ffdd00' : 'rgba(0,200,255,0.75)';
+      ctx.shadowColor = isPlayer ? '#ffdd00' : 'rgba(0,200,255,0.5)';
+      ctx.shadowBlur  = isPlayer ? 8 : 0;
+      ctx.fillText(
+        `${i + 1}. ${r.nome}  ${r.score}pts  ${this._formatTime(r.tempo)}`,
+        cx, y
+      );
+    });
+
+    ctx.restore();
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
 //  HIGH SCORE SYSTEM
 //  Salva e carrega o recorde de pontuação E tempo em localStorage.
 //  Reage visualmente quando o recorde é superado.
@@ -8535,6 +8637,7 @@ const HighScoreSystem = {
 // ── Carregar configurações salvas (antes de qualquer sistema) ──
 ControlSettings.load(SaveSystem.load());
 HighScoreSystem.load();
+SupabaseSystem.init();
 
 Input._init();
 Mobile._init();
