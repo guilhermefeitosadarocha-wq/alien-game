@@ -2965,6 +2965,8 @@ const UI = {
     ctx.shadowBlur = 0;
     ctx.fillText('VIDAS', CONFIG.TARGET_W - pad, pad + 24);
 
+    HighScoreSystem.drawHUD();
+
     ctx.restore();
 
     // --- Vidas overlay mobile: desenhado FORA do transform do canvas ---
@@ -3131,6 +3133,29 @@ const UI = {
     ctx.font        = '24px "Courier New"';
     ctx.fillStyle   = CONFIG.NEON_COLOR;
     ctx.fillText(`SCORE: ${Game.score}`, cx, CONFIG.TARGET_H/2 - 18);
+
+    // Recorde de pontuação
+    const isNewScore = HighScoreSystem._isNewScore && Game.score > 0;
+    ctx.font        = '14px "Courier New"';
+    ctx.fillStyle   = isNewScore ? '#ffdd00' : CONFIG.NEON_DIM;
+    ctx.shadowColor = '#ffdd00';
+    ctx.shadowBlur  = isNewScore ? 14 : 0;
+    ctx.fillText(
+      (isNewScore ? '★ ' : '') + 'RECORDE PONTOS: ' + HighScoreSystem.highScore,
+      cx,
+      CONFIG.TARGET_H / 2 + 10
+    );
+    // Recorde de tempo
+    const isNewTime = HighScoreSystem._isNewTime;
+    ctx.font        = '14px "Courier New"';
+    ctx.fillStyle   = isNewTime ? '#ffdd00' : CONFIG.NEON_DIM;
+    ctx.shadowColor = '#ffdd00';
+    ctx.shadowBlur  = isNewTime ? 14 : 0;
+    ctx.fillText(
+      (isNewTime ? '★ ' : '') + 'RECORDE TEMPO: ' + HighScoreSystem._formatTime(HighScoreSystem.highTime),
+      cx,
+      CONFIG.TARGET_H / 2 + 32
+    );
 
     ctx.font      = '16px "Courier New"';
     ctx.fillStyle = CONFIG.NEON_DIM;
@@ -3368,6 +3393,7 @@ const Game = {
     CriticalSystem.reset();
     MatchModifiers.reset();
     AnchorMode.reset();
+    HighScoreSystem.reset();
     EnergySystem.showBar(true);
     // Multiplayer reset
     MultiplayerSystem.reset();
@@ -3387,6 +3413,8 @@ const Game = {
 
   gameOver() {
     this.state = 'gameover';
+    HighScoreSystem.check(this.score, this.elapsed);
+    HighScoreSystem.save();
     Bullets.clear();
     EnemyBullets.clear();
     ComboSystem.reset();
@@ -3450,6 +3478,8 @@ const Game = {
     ShipEvolution.update();
     RandomRewards.check(this.elapsed);
     ChaosMode.check(this.elapsed);
+    HighScoreSystem.check(this.score, this.elapsed);
+    HighScoreSystem.update(gdt);
 
     Player.update(gdt);
     MultiplayerSystem.update(gdt);   // P2 update
@@ -3472,6 +3502,7 @@ const Game = {
 
       case 'playing':
         UI.drawArena();
+        HighScoreSystem.draw();
         PortalSystem.draw();
         ChestSystem.draw();
         BlackHoleSystem.draw();
@@ -8284,6 +8315,189 @@ const MobileExperience = {
 };
 
 // ═══════════════════════════════════════════════════════════
+//  HIGH SCORE SYSTEM
+//  Salva e carrega o recorde de pontuação E tempo em localStorage.
+//  Reage visualmente quando o recorde é superado.
+// ═══════════════════════════════════════════════════════════
+const HighScoreSystem = {
+  _keyScore:    'neonSiege_highScore_v1',
+  _keyTime:     'neonSiege_highTime_v1',
+  highScore:    0,
+  highTime:     0,     // melhor tempo sobrevivido em segundos
+  _isNewScore:  false,
+  _isNewTime:   false,
+  _notified:    false,
+  _glowTimer:   0,
+  _glowActive:  false,
+
+  // ── Formata segundos em mm:ss ────────────────────────────
+  _formatTime(s) {
+    const m   = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+  },
+
+  // ── Carrega os recordes salvos do localStorage ───────────
+  load() {
+    try {
+      const savedScore = localStorage.getItem(this._keyScore);
+      const savedTime  = localStorage.getItem(this._keyTime);
+      this.highScore = savedScore ? parseInt(savedScore) : 0;
+      this.highTime  = savedTime  ? parseFloat(savedTime) : 0;
+    } catch (e) {
+      this.highScore = 0;
+      this.highTime  = 0;
+    }
+  },
+
+  // ── Salva os recordes no localStorage ───────────────────
+  save() {
+    try {
+      localStorage.setItem(this._keyScore, String(this.highScore));
+      localStorage.setItem(this._keyTime,  String(this.highTime));
+    } catch (e) {}
+  },
+
+  // ── Reseta flags ao iniciar partida ─────────────────────
+  reset() {
+    this._isNewScore = false;
+    this._isNewTime  = false;
+    this._notified   = false;
+    this._glowTimer  = 0;
+    this._glowActive = false;
+  },
+
+  // ── Verifica se o score ou tempo atual supera o recorde ──
+  // Chame a cada frame durante o jogo passando Game.score e Game.elapsed.
+  check(currentScore, currentTime) {
+    let newRecord = false;
+
+    // Verifica recorde de pontuação
+    if (currentScore > this.highScore) {
+      this.highScore   = currentScore;
+      this._isNewScore = true;
+      newRecord        = true;
+    }
+
+    // Verifica recorde de tempo
+    if (currentTime > this.highTime) {
+      this.highTime   = currentTime;
+      this._isNewTime = true;
+      newRecord       = true;
+    }
+
+    if (newRecord) {
+      this.save();
+      // Notifica apenas uma vez por partida com FloatText
+      if (!this._notified) {
+        this._notified   = true;
+        this._glowActive = true;
+        this._glowTimer  = 5.0;
+        FloatText.spawn(
+          CONFIG.TARGET_W / 2,
+          CONFIG.TARGET_H / 2 - 80,
+          '★ NOVO RECORDE! ★',
+          '#ffdd00',
+          26,
+          2.5
+        );
+        ScreenFX.flash('rgba(255,220,0,0.30)', 0.8);
+        ScreenFX.shake(5, 0.4);
+        SFX.play('powerup_collect');
+      }
+    }
+  },
+
+  // ── Atualiza o timer do efeito de glow ──────────────────
+  update(dt) {
+    if (this._glowTimer > 0) {
+      this._glowTimer -= dt;
+      if (this._glowTimer <= 0) {
+        this._glowTimer  = 0;
+        this._glowActive = false;
+      }
+    }
+  },
+
+  // ── Desenha o efeito neon de recorde no canvas ──────────
+  draw() {
+    if (!this._glowActive) return;
+    const now   = performance.now() / 1000;
+    const alpha = Math.min(1, this._glowTimer / 2.0);
+
+    ctx.save();
+
+    // Borda neon pulsante colorida ao redor da arena
+    const pulse = 0.5 + Math.sin(now * 6) * 0.5;
+    const colors = [
+      `rgba(255,220,0,${alpha * pulse})`,
+      `rgba(255,100,0,${alpha * pulse})`,
+      `rgba(0,200,255,${alpha * pulse})`,
+      `rgba(200,0,255,${alpha * pulse})`,
+    ];
+    const colorIndex = Math.floor(now * 4) % colors.length;
+    const bw = 6;
+
+    ctx.strokeStyle = colors[colorIndex];
+    ctx.shadowColor = colors[colorIndex];
+    ctx.shadowBlur  = 30 + Math.sin(now * 8) * 15;
+    ctx.lineWidth   = bw;
+    ctx.strokeRect(bw / 2, bw / 2, CONFIG.TARGET_W - bw, CONFIG.TARGET_H - bw);
+
+    // Cantos com glow extra
+    const cLen = 40;
+    const corners = [
+      [0, 0, 1, 1],
+      [CONFIG.TARGET_W, 0, -1, 1],
+      [0, CONFIG.TARGET_H, 1, -1],
+      [CONFIG.TARGET_W, CONFIG.TARGET_H, -1, -1],
+    ];
+    ctx.lineWidth = 4;
+    for (const [cx, cy, sx, sy] of corners) {
+      ctx.beginPath();
+      ctx.moveTo(cx + sx * cLen, cy);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx, cy + sy * cLen);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  },
+
+  // ── Desenha recorde no HUD do canvas ────────────────────
+  drawHUD() {
+    const now = performance.now() / 1000;
+    ctx.save();
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'top';
+    ctx.shadowBlur   = 0;
+
+    if (this._glowActive && (this._isNewScore || this._isNewTime)) {
+      // Pisca em dourado quando está batendo recorde
+      const blink     = Math.sin(now * 8) > 0;
+      ctx.fillStyle   = blink ? '#ffdd00' : '#ffaa00';
+      ctx.shadowColor = '#ffdd00';
+      ctx.shadowBlur  = 10;
+      ctx.font        = '10px "Courier New"';
+      ctx.fillText(
+        '★ REC: ' + this.highScore + '  |  ' + this._formatTime(this.highTime),
+        CONFIG.TARGET_W / 2,
+        48
+      );
+    } else {
+      ctx.fillStyle = 'rgba(0,200,255,0.40)';
+      ctx.font      = '10px "Courier New"';
+      ctx.fillText(
+        'REC: ' + this.highScore + '  |  ' + this._formatTime(this.highTime),
+        CONFIG.TARGET_W / 2,
+        48
+      );
+    }
+    ctx.restore();
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
 // Unlock AudioContext no primeiro gesto do usuário
@@ -8296,6 +8510,7 @@ const MobileExperience = {
 
 // ── Carregar configurações salvas (antes de qualquer sistema) ──
 ControlSettings.load(SaveSystem.load());
+HighScoreSystem.load();
 
 Input._init();
 Mobile._init();
