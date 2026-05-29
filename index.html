@@ -8348,7 +8348,8 @@ const SupabaseSystem = {
       this._initialized = true;
       this.loadRanking();
     } catch (e) {
-      console.warn('Supabase não inicializado:', e);
+      console.error('Supabase não inicializado:', e);
+      alert('Erro ao inicializar Supabase: ' + JSON.stringify(e));
     }
   },
 
@@ -8363,7 +8364,8 @@ const SupabaseSystem = {
       });
       await this.loadRanking();
     } catch (e) {
-      console.warn('Erro ao salvar recorde:', e);
+      console.error('Erro ao salvar recorde:', e);
+      alert('Erro ao salvar: ' + JSON.stringify(e));
     }
   },
 
