@@ -2914,15 +2914,15 @@ const UI = {
     ctx.fillStyle = CONFIG.NEON_COLOR;
     ctx.shadowColor = CONFIG.NEON_COLOR;
     ctx.shadowBlur  = 10;
-    ctx.textAlign = 'left';
+    ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(`${Game.score}`, pad, pad);
+    ctx.fillText(`${Game.score}`, CONFIG.TARGET_W / 2 - 120, pad);
 
     // label
     ctx.font      = '11px "Courier New"';
     ctx.fillStyle = CONFIG.NEON_DIM;
     ctx.shadowBlur = 0;
-    ctx.fillText('SCORE', pad, pad + 24);
+    ctx.fillText('SCORE', CONFIG.TARGET_W / 2 - 120, pad + 24);
 
     // --- Moedas (canvas HUD) ---
     ctx.font        = 'bold 15px "Courier New"';
