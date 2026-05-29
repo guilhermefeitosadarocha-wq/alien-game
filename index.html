@@ -8357,9 +8357,9 @@ const SupabaseSystem = {
     if (!this._initialized || score <= 0) return;
     try {
       await this._client.from(this._table).insert({
-        nome:  this._playerName,
-        score: Math.floor(score),
-        tempo: parseFloat(tempo.toFixed(2)),
+        nome:        this._playerName,
+        pontuacao:   Math.floor(score),
+        tempo:       parseFloat(tempo.toFixed(2)),
       });
       await this.loadRanking();
     } catch (e) {
@@ -8373,8 +8373,8 @@ const SupabaseSystem = {
     try {
       const { data } = await this._client
         .from(this._table)
-        .select('nome, score, tempo')
-        .order('score', { ascending: false })
+        .select('nome, pontuacao, tempo')
+        .order('pontuacao', { ascending: false })
         .limit(10);
       this._ranking = data || [];
     } catch (e) {
@@ -8415,7 +8415,7 @@ const SupabaseSystem = {
       ctx.shadowColor = isPlayer ? '#ffdd00' : 'rgba(0,200,255,0.5)';
       ctx.shadowBlur  = isPlayer ? 8 : 0;
       ctx.fillText(
-        `${i + 1}. ${r.nome}  ${r.score}pts  ${this._formatTime(r.tempo)}`,
+        `${i + 1}. ${r.nome}  ${r.score || r.pontuacao}pts  ${this._formatTime(r.tempo)}`,
         cx, y
       );
     });
