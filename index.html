@@ -3156,6 +3156,14 @@ const UI = {
       cx,
       CONFIG.TARGET_H / 2 + 32
     );
+    // Na primeira partida exibe mensagem especial no game over
+    if (HighScoreSystem._isFirstGame || (HighScoreSystem._isNewScore && !HighScoreSystem._notified)) {
+      ctx.font        = '13px "Courier New"';
+      ctx.fillStyle   = '#ffdd00';
+      ctx.shadowColor = '#ffdd00';
+      ctx.shadowBlur  = 12;
+      ctx.fillText('★ Parabéns! Este é seu primeiro recorde! ★', cx, CONFIG.TARGET_H / 2 + 58);
+    }
 
     ctx.font      = '16px "Courier New"';
     ctx.fillStyle = CONFIG.NEON_DIM;
@@ -8329,6 +8337,7 @@ const HighScoreSystem = {
   _notified:    false,
   _glowTimer:   0,
   _glowActive:  false,
+  _isFirstGame: true,    // true = nunca jogou antes, false = já tem recorde salvo
 
   // ── Formata segundos em mm:ss ────────────────────────────
   _formatTime(s) {
@@ -8342,11 +8351,14 @@ const HighScoreSystem = {
     try {
       const savedScore = localStorage.getItem(this._keyScore);
       const savedTime  = localStorage.getItem(this._keyTime);
-      this.highScore = savedScore ? parseInt(savedScore) : 0;
-      this.highTime  = savedTime  ? parseFloat(savedTime) : 0;
+      this.highScore    = savedScore ? parseInt(savedScore) : 0;
+      this.highTime     = savedTime  ? parseFloat(savedTime) : 0;
+      // Se já existe algum recorde salvo, não é mais a primeira partida
+      this._isFirstGame = savedScore === null && savedTime === null;
     } catch (e) {
-      this.highScore = 0;
-      this.highTime  = 0;
+      this.highScore    = 0;
+      this.highTime     = 0;
+      this._isFirstGame = true;
     }
   },
 
@@ -8355,6 +8367,8 @@ const HighScoreSystem = {
     try {
       localStorage.setItem(this._keyScore, String(this.highScore));
       localStorage.setItem(this._keyTime,  String(this.highTime));
+      // Após salvar o primeiro recorde, já não é mais primeira partida
+      this._isFirstGame = false;
     } catch (e) {}
   },
 
@@ -8388,8 +8402,10 @@ const HighScoreSystem = {
 
     if (newRecord) {
       this.save();
-      // Notifica apenas uma vez por partida com FloatText
-      if (!this._notified) {
+      // Na primeira partida: nunca notifica durante o jogo,
+      // apenas salva silenciosamente. A tela de game over mostrará o recorde.
+      // Nas partidas seguintes: notifica imediatamente ao ultrapassar.
+      if (!this._notified && !this._isFirstGame) {
         this._notified   = true;
         this._glowActive = true;
         this._glowTimer  = 5.0;
@@ -8401,10 +8417,6 @@ const HighScoreSystem = {
           26,
           2.5
         );
-        ScreenFX.flash('rgba(255,220,0,0.30)', 0.8);
-        ScreenFX.shake(5, 0.4);
-        SFX.play('powerup_collect');
-        // Mensagem de parabéns centralizada na tela
         FloatText.spawn(
           CONFIG.TARGET_W / 2,
           CONFIG.TARGET_H / 2 - 40,
@@ -8413,6 +8425,9 @@ const HighScoreSystem = {
           20,
           3.5
         );
+        ScreenFX.flash('rgba(255,220,0,0.30)', 0.8);
+        ScreenFX.shake(5, 0.4);
+        SFX.play('powerup_collect');
       }
     }
   },
