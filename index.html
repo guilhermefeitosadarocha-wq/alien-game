@@ -2939,6 +2939,9 @@ const UI = {
       heartsStr += i < Player.lives ? '❤️' : '🖤';
     }
     ctx.globalAlpha = 1.0;
+    ctx.shadowColor = '#ff4466';
+    ctx.shadowBlur = 10;
+    ctx.textBaseline = 'top';
     ctx.fillText(heartsStr, CONFIG.TARGET_W - pad, pad - 2);
     ctx.globalAlpha = 1.0;
 
