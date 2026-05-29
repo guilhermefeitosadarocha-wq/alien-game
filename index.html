@@ -3424,7 +3424,11 @@ const Game = {
     this.state = 'gameover';
     HighScoreSystem.check(this.score, this.elapsed);
     HighScoreSystem.save();
-    SupabaseSystem.saveRecord(this.score, this.elapsed);
+    if (typeof SupabaseSystem !== 'undefined') {
+      SupabaseSystem.saveRecord(this.score, this.elapsed);
+    } else {
+      alert('SupabaseSystem não encontrado!');
+    }
     Bullets.clear();
     EnemyBullets.clear();
     ComboSystem.reset();
