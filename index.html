@@ -8404,6 +8404,15 @@ const HighScoreSystem = {
         ScreenFX.flash('rgba(255,220,0,0.30)', 0.8);
         ScreenFX.shake(5, 0.4);
         SFX.play('powerup_collect');
+        // Mensagem de parabéns centralizada na tela
+        FloatText.spawn(
+          CONFIG.TARGET_W / 2,
+          CONFIG.TARGET_H / 2 - 40,
+          'Parabéns! Superou seu recorde!',
+          '#ffdd00',
+          20,
+          3.5
+        );
       }
     }
   },
