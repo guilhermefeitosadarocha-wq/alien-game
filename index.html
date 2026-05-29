@@ -1720,6 +1720,15 @@
             <div class="toggle-track"></div>
           </label>
         </div>
+        <div class="settings-row">
+  <span class="settings-row-label">Zoom da câmera
+    <span class="settings-row-sub">Mais longe ↔ Mais perto</span>
+  </span>
+  <div style="display:flex;align-items:center;gap:8px">
+    <input type="range" class="settings-slider" id="cameraZoom" min="80" max="150" value="100">
+    <span class="slider-val" id="cameraZoomVal">100%</span>
+  </div>
+</div>
       </div>
 
       <!-- ── ABA MOBILE ── -->
@@ -2028,6 +2037,10 @@ const MOVE_CONFIG = {
   DASH_SPEED_REF: 680,
 };
 
+// Multiplicador de zoom da câmera — editável pelo jogador via configurações
+// 1.0 = zoom padrão, > 1.0 = mais perto, < 1.0 = mais longe
+let CAMERA_ZOOM = 1.0;
+
 // ═══════════════════════════════════════════════════════════
 //  PLAYER MOVEMENT — sistema dedicado de movimentação
 //
@@ -2256,6 +2269,7 @@ function resizeCanvas() {
     scale = Math.min(sw / CONFIG.TARGET_W, sh / CONFIG.TARGET_H);
   }
 
+  scale   = scale * CAMERA_ZOOM;
   offsetX = (sw - CONFIG.TARGET_W * scale) / 2;
   offsetY = (sh - CONFIG.TARGET_H * scale) / 2;
 }
@@ -5886,6 +5900,9 @@ const SettingsUI = {
     this._setSlider('joystickSize',  'joystickSizeVal',  d.joystickSize,  'px');
     this._setSlider('mobileOpacity', 'mobileOpacityVal', d.mobileOpacity, '%');
     this._setRadioGroup('shootBtnPos', String(d.shootBtnBottom));
+
+    // Zoom da câmera
+    this._setSlider('cameraZoom', 'cameraZoomVal', Math.round(CAMERA_ZOOM * 100), '%');
   },
 
   _refreshKeybindBtns() {
@@ -6154,6 +6171,20 @@ const SettingsUI = {
       SaveSystem.save(ControlSettings.data);
       this.flashSaved();
     });
+
+    // Zoom da câmera
+    const cameraZoomEl    = document.getElementById('cameraZoom');
+    const cameraZoomValEl = document.getElementById('cameraZoomVal');
+    if (cameraZoomEl) {
+      cameraZoomEl.addEventListener('input', () => {
+        const v   = parseInt(cameraZoomEl.value);
+        CAMERA_ZOOM = v / 100;
+        cameraZoomValEl.textContent = v + '%';
+        resizeCanvas();
+        SaveSystem.save(ControlSettings.data);
+        this.flashSaved();
+      });
+    }
   },
 };
 
