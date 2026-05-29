@@ -2033,7 +2033,7 @@ const PlayerMovement = {
     // O joystick já entrega um vetor normalizado [-1, 1].
     // Só substitui se estiver sendo usado (magnitude > dead-zone).
     const jx = Mobile.joyVec.x, jy = Mobile.joyVec.y;
-    if (Math.abs(jx) > 0.08 || Math.abs(jy) > 0.08) {
+    if (Math.abs(jx) > 0.05 || Math.abs(jy) > 0.05) {
       dx = jx; dy = jy;
     }
 
@@ -2210,6 +2210,7 @@ function resizeCanvas() {
       // Ocupa 100% da largura e centraliza verticalmente
       scale = scaleX;
     }
+    scale = scale * 1.35;
   } else {
     // PC: comportamento original
     scale = Math.min(sw / CONFIG.TARGET_W, sh / CONFIG.TARGET_H);
