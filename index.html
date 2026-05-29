@@ -8360,36 +8360,32 @@ const SupabaseSystem = {
   },
 
   // ── Salva o recorde no banco ─────────────────────────────
-  async saveRecord(score, tempo) {
+  saveRecord(score, tempo) {
     if (!this._initialized || score <= 0) return;
-    try {
-      const url = 'https://xasgwdhartnrivgrzv ri.supabase.co/rest/v1/recordes';
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': this._KEY,
-          'Authorization': 'Bearer ' + this._KEY,
-          'Prefer': 'return=minimal',
-          'Access-Control-Allow-Origin': '*',
-        },
-        mode: 'cors',
-        body: JSON.stringify({
-          nome:  this._playerName,
-          score: Math.floor(score),
-          tempo: parseFloat(tempo.toFixed(2)),
-        }),
-      });
-      if (!response.ok) {
-        const err = await response.text();
-        alert('Erro: ' + response.status + ' - ' + err);
+    const url = 'https://xasgwdhartnrivgrzv ri.supabase.co/rest/v1/recordes';
+    const data = JSON.stringify({
+      nome:  this._playerName,
+      score: Math.floor(score),
+      tempo: parseFloat(tempo.toFixed(2)),
+    });
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('apikey', this._KEY);
+    xhr.setRequestHeader('Authorization', 'Bearer ' + this._KEY);
+    xhr.setRequestHeader('Prefer', 'return=minimal');
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        alert('Salvo com sucesso!');
+        this.loadRanking();
       } else {
-        alert('Salvo!');
-        await this.loadRanking();
+        alert('Erro ' + xhr.status + ': ' + xhr.responseText);
       }
-    } catch (e) {
-      alert('Erro: ' + e.message);
-    }
+    };
+    xhr.onerror = () => {
+      alert('Erro de rede XHR');
+    };
+    xhr.send(data);
   },
 
   // ── Carrega o ranking do banco ───────────────────────────
