@@ -1564,6 +1564,178 @@
   font-family: 'Courier New', monospace;
   font-size: 10px; color: rgba(0,200,255,0.35);
 }
+
+/* ── TELA DE PERFIL ── */
+#profileScreen {
+  position: fixed; inset: 0; z-index: 910;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+}
+#profileScreen.visible { display: flex; }
+
+#profilePanel {
+  background: rgba(2,12,24,0.98);
+  border: 1.5px solid rgba(0,200,255,0.40);
+  border-radius: 16px;
+  padding: 36px 32px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 16px;
+  width: min(420px, 92vw);
+  box-shadow: 0 0 60px rgba(0,200,255,0.15);
+  animation: settingsSlideIn 0.25s cubic-bezier(.22,.68,0,1.2);
+  position: relative;
+}
+
+#profilePanel::before {
+  content: '';
+  position: absolute; top: 0; left: 12%; right: 12%; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,200,255,0.65), transparent);
+}
+
+#profileTitle {
+  font-family: 'Courier New', monospace;
+  font-size: 18px; font-weight: bold;
+  letter-spacing: 0.16em; color: #00c8ff;
+  text-shadow: 0 0 14px rgba(0,200,255,0.7);
+}
+
+#profileAvatar {
+  font-size: 52px; line-height: 1;
+  cursor: pointer;
+  filter: drop-shadow(0 0 12px rgba(0,200,255,0.6));
+  transition: transform 0.15s;
+}
+#profileAvatar:hover { transform: scale(1.12); }
+
+#profileAvatarLabel {
+  font-family: 'Courier New', monospace;
+  font-size: 10px; color: rgba(0,200,255,0.40);
+  letter-spacing: 0.08em;
+}
+
+#profileAvatarPicker {
+  display: flex; flex-wrap: wrap;
+  gap: 10px; justify-content: center;
+  max-width: 320px;
+}
+.avatar-opt {
+  font-size: 28px; cursor: pointer;
+  padding: 6px; border-radius: 8px;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.12s;
+}
+.avatar-opt:hover { transform: scale(1.18); }
+.avatar-opt.selected {
+  border-color: rgba(0,200,255,0.70);
+  background: rgba(0,200,255,0.10);
+}
+
+#profileDivider {
+  width: 85%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,200,255,0.25), transparent);
+}
+
+#profileNameLabel {
+  font-family: 'Courier New', monospace;
+  font-size: 11px; color: rgba(0,200,255,0.50);
+  letter-spacing: 0.10em; align-self: flex-start;
+}
+
+#profileNameInput {
+  width: 100%; padding: 12px 16px;
+  background: rgba(0,200,255,0.06);
+  border: 1.5px solid rgba(0,200,255,0.40);
+  border-radius: 8px; outline: none;
+  font-family: 'Courier New', monospace;
+  font-size: 15px; font-weight: bold;
+  color: #00c8ff; letter-spacing: 0.08em;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#profileNameInput:focus {
+  border-color: rgba(0,200,255,0.75);
+  box-shadow: 0 0 20px rgba(0,200,255,0.25);
+}
+#profileNameInput::placeholder { color: rgba(0,200,255,0.25); }
+
+#profileStats {
+  width: 100%;
+  background: rgba(0,200,255,0.04);
+  border: 1px solid rgba(0,200,255,0.15);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.profile-stat-row {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.profile-stat-label {
+  font-family: 'Courier New', monospace;
+  font-size: 10px; color: rgba(0,200,255,0.45);
+  letter-spacing: 0.08em;
+}
+.profile-stat-val {
+  font-family: 'Courier New', monospace;
+  font-size: 12px; font-weight: bold;
+  color: #00c8ff; text-shadow: 0 0 8px rgba(0,200,255,0.5);
+}
+
+.profile-btn-row {
+  display: flex; gap: 10px; width: 100%;
+}
+
+#profileSaveBtn {
+  flex: 1; padding: 12px;
+  border-radius: 9px;
+  border: 1.5px solid rgba(0,255,136,0.50);
+  background: rgba(0,255,136,0.08);
+  color: #00ff88; font-family: 'Courier New', monospace;
+  font-size: 13px; font-weight: bold;
+  letter-spacing: 0.10em; cursor: pointer;
+  transition: all 0.15s;
+}
+#profileSaveBtn:hover {
+  background: rgba(0,255,136,0.18);
+  box-shadow: 0 0 20px rgba(0,255,136,0.25);
+}
+
+#profileCloseBtn {
+  flex: 1; padding: 12px;
+  border-radius: 9px;
+  border: 1.5px solid rgba(255,60,60,0.40);
+  background: rgba(255,60,60,0.06);
+  color: rgba(255,120,120,0.9); font-family: 'Courier New', monospace;
+  font-size: 13px; font-weight: bold;
+  letter-spacing: 0.10em; cursor: pointer;
+  transition: all 0.15s;
+}
+#profileCloseBtn:hover {
+  background: rgba(255,60,60,0.14);
+  box-shadow: 0 0 18px rgba(255,60,60,0.20);
+}
+
+#profileResetBtn {
+  width: 100%; padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,100,0,0.35);
+  background: rgba(255,100,0,0.05);
+  color: rgba(255,140,0,0.75); font-family: 'Courier New', monospace;
+  font-size: 11px; letter-spacing: 0.08em; cursor: pointer;
+  transition: all 0.15s;
+}
+#profileResetBtn:hover {
+  background: rgba(255,100,0,0.12);
+  color: #ff6600;
+}
+
+#profileFeedback {
+  font-family: 'Courier New', monospace;
+  font-size: 11px; color: #00ff88;
+  text-shadow: 0 0 8px rgba(0,255,136,0.6);
+  min-height: 16px; opacity: 0;
+  transition: opacity 0.3s;
+}
+#profileFeedback.visible { opacity: 1; }
 </style>
 </head>
 <body>
@@ -1648,6 +1820,7 @@
     <button class="pause-menu-btn" id="pauseRestartBtn">↺  REINICIAR</button>
     <button class="pause-menu-btn btn-exit" id="pauseExitBtn">✕  MENU INICIAL</button>
     <button class="pause-menu-btn" id="pauseSettingsBtn">⚙  CONTROLES</button>
+    <button class="pause-menu-btn" id="pauseProfileBtn">👤  MEU PERFIL</button>
     <span id="pauseHint">[ P ] pausar / continuar</span>
   </div>
 </div>
@@ -1914,6 +2087,76 @@
 </div>
 <div id="anchorCooldownBadge">⚓ ÂNCORA: RECARREGANDO</div>
 <button id="anchorPulseBtn" title="Pulse Aniquilador">💥</button>
+<button id="profileMenuBtn" style="
+  position:fixed; bottom:96px; left:50%; transform:translateX(-50%);
+  z-index:201; background:rgba(0,10,20,0.82);
+  border:1.5px solid rgba(255,0,200,0.45); border-radius:8px;
+  color:rgba(255,0,200,0.85); font-family:'Courier New',monospace;
+  font-size:12px; font-weight:bold; letter-spacing:0.08em;
+  padding:8px 20px; cursor:pointer; backdrop-filter:blur(6px);
+  opacity:0; pointer-events:none; transition:opacity 0.2s;
+">👤 MEU PERFIL</button>
+
+<!-- TELA DE PERFIL -->
+<div id="profileScreen">
+  <div id="profilePanel">
+    <div id="profileTitle">◈ MEU PERFIL</div>
+
+    <!-- Avatar -->
+    <div id="profileAvatar">🚀</div>
+    <div id="profileAvatarLabel">clique para trocar o avatar</div>
+    <div id="profileAvatarPicker" style="display:none">
+      <span class="avatar-opt" data-emoji="🚀">🚀</span>
+      <span class="avatar-opt" data-emoji="⚡">⚡</span>
+      <span class="avatar-opt" data-emoji="🌟">🌟</span>
+      <span class="avatar-opt" data-emoji="🔥">🔥</span>
+      <span class="avatar-opt" data-emoji="💎">💎</span>
+      <span class="avatar-opt" data-emoji="🎯">🎯</span>
+      <span class="avatar-opt" data-emoji="👾">👾</span>
+      <span class="avatar-opt" data-emoji="🤖">🤖</span>
+      <span class="avatar-opt" data-emoji="💀">💀</span>
+      <span class="avatar-opt" data-emoji="🐉">🐉</span>
+      <span class="avatar-opt" data-emoji="🦊">🦊</span>
+      <span class="avatar-opt" data-emoji="🐺">🐺</span>
+    </div>
+
+    <div id="profileDivider"></div>
+
+    <!-- Nome -->
+    <div id="profileNameLabel">NOME DO JOGADOR</div>
+    <input id="profileNameInput" type="text" maxlength="20"
+      placeholder="Seu nome..." autocomplete="off" spellcheck="false">
+
+    <div id="profileDivider"></div>
+
+    <!-- Estatísticas -->
+    <div id="profileStats">
+      <div class="profile-stat-row">
+        <span class="profile-stat-label">🏆 RECORDE DE PONTOS</span>
+        <span class="profile-stat-val" id="profileHighScore">0</span>
+      </div>
+      <div class="profile-stat-row">
+        <span class="profile-stat-label">⏱ MELHOR TEMPO</span>
+        <span class="profile-stat-val" id="profileHighTime">00:00</span>
+      </div>
+      <div class="profile-stat-row">
+        <span class="profile-stat-label">🪙 MOEDAS TOTAIS</span>
+        <span class="profile-stat-val" id="profileCoins">0</span>
+      </div>
+    </div>
+
+    <!-- Feedback -->
+    <div id="profileFeedback"></div>
+
+    <!-- Botões -->
+    <div class="profile-btn-row">
+      <button id="profileSaveBtn">✓ SALVAR</button>
+      <button id="profileCloseBtn">✕ FECHAR</button>
+    </div>
+    <button id="profileResetBtn">⚠ RESETAR RECORDE LOCAL</button>
+  </div>
+</div>
+
 <!-- TELA DE NOME DO JOGADOR -->
 <div id="nameScreen">
   <div id="namePanel">
@@ -3188,6 +3431,9 @@ const UI = {
     // Mostra botão CONTROLS (DOM) no menu
     const _sb = document.getElementById('settingsBtn');
     if (_sb && !_sb.classList.contains('visible')) _sb.classList.add('visible');
+    // Mostra botão de perfil no menu
+    const _pb = document.getElementById('profileMenuBtn');
+    if (_pb && !_pb.classList.contains('visible')) _pb.classList.add('visible');
     // Mostra botão multiplayer no menu
     MultiplayerSystem.showToggleBtn(true);
   },
@@ -3503,6 +3749,9 @@ const Game = {
     const _sb = document.getElementById('settingsBtn');
     if (_sb) _sb.classList.remove('visible');
     MultiplayerSystem.showToggleBtn(false);
+    // Oculta botão de perfil durante o jogo
+    const _pb = document.getElementById('profileMenuBtn');
+    if (_pb) { _pb.style.opacity = '0'; _pb.style.pointerEvents = 'none'; }
   },
 
   restart() { this.start(); },
@@ -8743,6 +8992,172 @@ const HighScoreSystem = {
 };
 
 // ═══════════════════════════════════════════════════════════
+//  PROFILE SYSTEM
+//  Tela de edição de perfil: nome, avatar e estatísticas.
+// ═══════════════════════════════════════════════════════════
+const ProfileSystem = {
+  _KEY_NAME:   'neonSiege_playerName',
+  _KEY_AVATAR: 'neonSiege_playerAvatar',
+
+  _overlay:      null,
+  _avatarEl:     null,
+  _pickerEl:     null,
+  _nameInput:    null,
+  _feedbackEl:   null,
+  _feedbackTimer: null,
+  _currentAvatar: '🚀',
+
+  init() {
+    this._overlay   = document.getElementById('profileScreen');
+    this._avatarEl  = document.getElementById('profileAvatar');
+    this._pickerEl  = document.getElementById('profileAvatarPicker');
+    this._nameInput = document.getElementById('profileNameInput');
+    this._feedbackEl = document.getElementById('profileFeedback');
+
+    // Carrega dados salvos
+    this.loadProfile();
+
+    // Avatar: clique abre/fecha o picker
+    this._avatarEl.addEventListener('click', () => {
+      const visible = this._pickerEl.style.display !== 'none';
+      this._pickerEl.style.display = visible ? 'none' : 'flex';
+    });
+
+    // Seleção de avatar
+    this._pickerEl.addEventListener('click', e => {
+      const opt = e.target.closest('.avatar-opt');
+      if (!opt) return;
+      this._currentAvatar = opt.dataset.emoji;
+      this._avatarEl.textContent = this._currentAvatar;
+      this._pickerEl.style.display = 'none';
+      // Atualiza selecionado
+      this._pickerEl.querySelectorAll('.avatar-opt').forEach(o => {
+        o.classList.toggle('selected', o.dataset.emoji === this._currentAvatar);
+      });
+    });
+
+    // Salvar perfil
+    document.getElementById('profileSaveBtn').addEventListener('click', () => {
+      this.saveProfile();
+    });
+
+    // Fechar sem salvar
+    document.getElementById('profileCloseBtn').addEventListener('click', () => {
+      this.hide();
+    });
+
+    // Resetar recorde local
+    document.getElementById('profileResetBtn').addEventListener('click', () => {
+      if (confirm('Tem certeza que deseja resetar seu recorde local? Esta ação não pode ser desfeita.')) {
+        try {
+          localStorage.removeItem('neonSiege_highScore_v1');
+          localStorage.removeItem('neonSiege_highTime_v1');
+          HighScoreSystem.highScore = 0;
+          HighScoreSystem.highTime  = 0;
+        } catch (e) {}
+        this._showFeedback('Recorde resetado com sucesso!');
+        this._syncStats();
+      }
+    });
+
+    // Fechar clicando fora do painel
+    this._overlay.addEventListener('click', e => {
+      if (e.target === this._overlay) this.hide();
+    });
+
+    // Tecla Escape fecha
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Escape' && this.isOpen()) this.hide();
+    });
+  },
+
+  // ── Carrega perfil do localStorage ──────────────────────
+  loadProfile() {
+    try {
+      const nome   = localStorage.getItem(this._KEY_NAME)   || 'Jogador';
+      const avatar = localStorage.getItem(this._KEY_AVATAR) || '🚀';
+      this._currentAvatar = avatar;
+      if (this._avatarEl)  this._avatarEl.textContent  = avatar;
+      if (this._nameInput) this._nameInput.value        = nome;
+      // Sincroniza com SupabaseSystem
+      if (typeof SupabaseSystem !== 'undefined') SupabaseSystem._playerName = nome;
+      // Marca avatar selecionado no picker
+      if (this._pickerEl) {
+        this._pickerEl.querySelectorAll('.avatar-opt').forEach(o => {
+          o.classList.toggle('selected', o.dataset.emoji === avatar);
+        });
+      }
+    } catch (e) {}
+  },
+
+  // ── Salva perfil no localStorage ────────────────────────
+  saveProfile() {
+    const nome = this._nameInput.value.trim();
+    if (nome.length === 0) {
+      this._showFeedback('Digite um nome válido!', true);
+      return;
+    }
+    try {
+      localStorage.setItem(this._KEY_NAME,   nome);
+      localStorage.setItem(this._KEY_AVATAR, this._currentAvatar);
+      // Sincroniza com SupabaseSystem e NameScreen
+      if (typeof SupabaseSystem !== 'undefined') SupabaseSystem._playerName = nome;
+      if (typeof NameScreen !== 'undefined' && NameScreen._input) {
+        NameScreen._input.value = nome;
+      }
+    } catch (e) {}
+    this._showFeedback('Perfil salvo com sucesso!');
+    SFX.play('shop_buy');
+  },
+
+  // ── Sincroniza estatísticas na tela ─────────────────────
+  _syncStats() {
+    const hsEl = document.getElementById('profileHighScore');
+    const htEl = document.getElementById('profileHighTime');
+    const coEl = document.getElementById('profileCoins');
+    if (hsEl) hsEl.textContent = HighScoreSystem.highScore || 0;
+    if (htEl) htEl.textContent = HighScoreSystem._formatTime
+      ? HighScoreSystem._formatTime(HighScoreSystem.highTime || 0)
+      : '00:00';
+    if (coEl) coEl.textContent = CoinSystem.get ? CoinSystem.get() : 0;
+  },
+
+  // ── Exibe feedback ───────────────────────────────────────
+  _showFeedback(msg, isError) {
+    if (!this._feedbackEl) return;
+    clearTimeout(this._feedbackTimer);
+    this._feedbackEl.textContent  = msg;
+    this._feedbackEl.style.color  = isError ? '#ff4466' : '#00ff88';
+    this._feedbackEl.style.textShadow = isError
+      ? '0 0 8px rgba(255,60,60,0.6)' : '0 0 8px rgba(0,255,136,0.6)';
+    this._feedbackEl.classList.add('visible');
+    this._feedbackTimer = setTimeout(() => {
+      this._feedbackEl.classList.remove('visible');
+    }, 2500);
+  },
+
+  // ── Abre a tela de perfil ────────────────────────────────
+  show() {
+    this.loadProfile();
+    this._syncStats();
+    this._pickerEl.style.display = 'none';
+    this._overlay.classList.add('visible');
+    setTimeout(() => { if (this._nameInput) this._nameInput.focus(); }, 100);
+    SFX.play('menu_open');
+  },
+
+  hide() {
+    this._overlay.classList.remove('visible');
+    SFX.play('menu_close');
+  },
+
+  isOpen() { return this._overlay && this._overlay.classList.contains('visible'); },
+
+  // ── Retorna o avatar atual ───────────────────────────────
+  getAvatar() { return this._currentAvatar; },
+};
+
+// ═══════════════════════════════════════════════════════════
 //  NAME SCREEN SYSTEM
 //  Tela elegante para o jogador digitar o nome antes de jogar.
 // ═══════════════════════════════════════════════════════════
@@ -8839,6 +9254,22 @@ ControlSettings.load(SaveSystem.load());
 HighScoreSystem.load();
 SupabaseSystem.init();
 NameScreen.init();
+ProfileSystem.init();
+
+// Botão perfil no pause
+const _pauseProfileBtn = document.getElementById('pauseProfileBtn');
+if (_pauseProfileBtn) {
+  _pauseProfileBtn.addEventListener('click', () => {
+    PauseUI.hidePauseMenu();
+    ProfileSystem.show();
+  });
+}
+
+// Botão perfil no menu principal
+const _profileMenuBtn = document.getElementById('profileMenuBtn');
+if (_profileMenuBtn) {
+  _profileMenuBtn.addEventListener('click', () => ProfileSystem.show());
+}
 
 Input._init();
 Mobile._init();
