@@ -7708,16 +7708,34 @@ const MatchModifiers = {
         SFX.play('game_start');
         Game.start();
       } else {
-        // Nunca configurou perfil — mostra tela de nome
-        if (typeof NameScreen !== 'undefined') {
-          NameScreen.show(() => {
-            // Salva o nome também na chave do ProfileSystem para consistência
-            try {
-              localStorage.setItem('neonSiege_playerName', SupabaseSystem._playerName);
-            } catch (e) {}
-            Game.start();
-          });
+        // Nunca configurou perfil — mostra tela de perfil completo
+        if (typeof ProfileSystem !== 'undefined' && ProfileSystem._overlay) {
+          ProfileSystem.show();
+          // Sobrescreve o botão salvar para iniciar o jogo após salvar
+          const _psb = document.getElementById('profileSaveBtn');
+          if (_psb) {
+            const _psbClone = _psb.cloneNode(true);
+            _psb.parentNode.replaceChild(_psbClone, _psb);
+            _psbClone.addEventListener('click', () => {
+              const nome = document.getElementById('profileNameInput').value.trim();
+              if (nome.length === 0) return;
+              try {
+                localStorage.setItem('neonSiege_playerName', nome);
+                localStorage.setItem('neonSiege_playerAvatar', ProfileSystem._currentAvatar);
+              } catch (e) {}
+              if (typeof SupabaseSystem !== 'undefined') SupabaseSystem._playerName = nome;
+              ProfileSystem.hide();
+              SFX.play('game_start');
+              Game.start();
+            });
+          }
         } else {
+          // Fallback: usa prompt nativo se ProfileSystem não estiver disponível
+          const nome = prompt('Digite seu nome para o ranking:', 'Jogador');
+          if (nome && nome.trim().length > 0) {
+            try { localStorage.setItem('neonSiege_playerName', nome.trim()); } catch (e) {}
+            if (typeof SupabaseSystem !== 'undefined') SupabaseSystem._playerName = nome.trim();
+          }
           SFX.play('game_start');
           Game.start();
         }
