@@ -7693,17 +7693,34 @@ const MatchModifiers = {
     document.getElementById('modifierStartBtn').addEventListener('click', () => {
       this.applySelected();
       this._overlay.classList.remove('visible');
-      // Verifica se já tem nome salvo
-      const jaTemNome = NameScreen.loadSavedName();
-      if (jaTemNome) {
-        // Já tem nome — inicia direto
+
+      // Verifica se já tem perfil configurado (nome salvo pelo ProfileSystem)
+      let nomeExistente = null;
+      try {
+        nomeExistente = localStorage.getItem('neonSiege_playerName');
+      } catch (e) {}
+
+      if (nomeExistente && nomeExistente.trim().length > 0) {
+        // Já tem perfil — sincroniza o nome e inicia direto
+        if (typeof SupabaseSystem !== 'undefined') {
+          SupabaseSystem._playerName = nomeExistente.trim();
+        }
         SFX.play('game_start');
         Game.start();
       } else {
-        // Primeira vez — mostra tela de nome
-        NameScreen.show(() => {
+        // Nunca configurou perfil — mostra tela de nome
+        if (typeof NameScreen !== 'undefined') {
+          NameScreen.show(() => {
+            // Salva o nome também na chave do ProfileSystem para consistência
+            try {
+              localStorage.setItem('neonSiege_playerName', SupabaseSystem._playerName);
+            } catch (e) {}
+            Game.start();
+          });
+        } else {
+          SFX.play('game_start');
           Game.start();
-        });
+        }
       }
     });
   },
