@@ -8376,14 +8376,13 @@ const SupabaseSystem = {
     xhr.setRequestHeader('Prefer', 'return=minimal');
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        alert('Salvo com sucesso!');
         this.loadRanking();
       } else {
-        alert('Erro ' + xhr.status + ': ' + xhr.responseText);
+        console.warn('Erro ao salvar recorde:', xhr.status, xhr.responseText);
       }
     };
     xhr.onerror = () => {
-      alert('Erro de rede XHR');
+      console.warn('Erro de rede XHR');
     };
     xhr.send(data);
   },
