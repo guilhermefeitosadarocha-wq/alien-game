@@ -310,9 +310,10 @@
     top: 16px; left: 16px;
     z-index: 200;
     background: rgba(0,10,20,0.80);
-    border: 1.5px solid rgba(0,200,255,0.50);
+    border: 1.5px solid rgba(255,0,200,0.60);
     border-radius: 8px;
-    color: #00c8ff;
+    color: #ff00cc;
+    text-shadow: 0 0 8px rgba(255,0,200,0.6);
     font-family: 'Courier New', monospace;
     font-size: 13px;
     font-weight: bold;
@@ -378,8 +379,8 @@
     font-family: 'Courier New', monospace;
     font-size: 22px;
     font-weight: bold;
-    color: #00c8ff;
-    text-shadow: 0 0 16px rgba(0,200,255,0.7);
+    color: #ff00cc;
+    text-shadow: 0 0 18px rgba(255,0,200,0.75);
     letter-spacing: 0.12em;
   }
   #shopCoinDisplay {
@@ -490,9 +491,9 @@
     font-family: 'Courier New', monospace;
     font-size: 12px;
     font-weight: bold;
-    color: #00c8ff;
+    color: #00eeff;
     letter-spacing: 0.05em;
-    text-shadow: 0 0 6px rgba(0,200,255,0.4);
+    text-shadow: 0 0 8px rgba(0,238,255,0.6);
   }
   .shop-card-desc  {
     font-family: 'Courier New', monospace;
@@ -535,9 +536,9 @@
     width: 100%;
     padding: 8px 0;
     border-radius: 6px;
-    border: 1px solid rgba(0,200,255,0.45);
-    background: rgba(0,200,255,0.08);
-    color: #00c8ff;
+    border: 1px solid rgba(0,255,136,0.55);
+    background: rgba(0,255,136,0.08);
+    color: #00ff88;
     font-family: 'Courier New', monospace;
     font-size: 11px;
     font-weight: bold;
@@ -616,9 +617,9 @@
     z-index: 201;
     width: 38px; height: 38px;
     border-radius: 8px;
-    border: 1.5px solid rgba(0,200,255,0.45);
+    border: 1.5px solid rgba(255,220,0,0.55);
     background: rgba(0,10,20,0.82);
-    color: rgba(0,200,255,0.85);
+    color: rgba(255,220,0,0.90);
     font-size: 15px;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
@@ -694,14 +695,14 @@
     font-size: 32px;
     font-weight: bold;
     letter-spacing: 0.18em;
-    color: #00c8ff;
-    text-shadow: 0 0 22px rgba(0,200,255,0.75), 0 0 6px rgba(0,200,255,0.4);
+    color: #ff00cc;
+    text-shadow: 0 0 22px rgba(255,0,200,0.85), 0 0 6px rgba(255,0,200,0.5);
     margin-bottom: 6px;
     animation: pauseGlowPulse 2.4s ease-in-out infinite;
   }
   @keyframes pauseGlowPulse {
-    0%, 100% { text-shadow: 0 0 22px rgba(0,200,255,0.75), 0 0 6px rgba(0,200,255,0.4); }
-    50%       { text-shadow: 0 0 36px rgba(0,200,255,1),    0 0 12px rgba(0,200,255,0.6); }
+    0%, 100% { text-shadow: 0 0 22px rgba(255,0,200,0.85), 0 0 6px rgba(255,0,200,0.5); }
+    50%       { text-shadow: 0 0 40px rgba(255,0,200,1),    0 0 14px rgba(255,0,200,0.7); }
   }
 
   /* Separador */
@@ -765,9 +766,9 @@
 
   /* Variantes de botão */
   .pause-menu-btn.btn-continue {
-    border-color: rgba(0,255,160,0.45);
-    color: #00ffaa;
-    text-shadow: 0 0 7px rgba(0,255,160,0.5);
+    border-color: rgba(0,255,136,0.65);
+    color: #00ff88;
+    text-shadow: 0 0 10px rgba(0,255,136,0.7);
     background: rgba(0,255,160,0.07);
   }
   .pause-menu-btn.btn-continue:hover {
@@ -2287,9 +2288,14 @@ const CONFIG = {
   PARTICLE_COUNT: 18,
   PARTICLE_LIFE: 0.9,
   INVINCIBLE_TIME: 1.8,
-  NEON_COLOR: '#00c8ff',
-  NEON_DIM: 'rgba(0,200,255,0.6)',
-  NEON_GLOW: 'rgba(0,200,255,0.25)',
+  NEON_COLOR:   '#00eeff',
+  NEON_DIM:     'rgba(0,238,255,0.7)',
+  NEON_GLOW:    'rgba(0,238,255,0.35)',
+  NEON_PINK:    '#ff00cc',
+  NEON_GREEN:   '#00ff88',
+  NEON_ORANGE:  '#ff6600',
+  NEON_PURPLE:  '#aa00ff',
+  NEON_YELLOW:  '#ffdd00',
   ENEMY_EMOJIS: ['👾','👽','🤖','💀','👻'],
   SCORE_PER_KILL: 10,
 };
@@ -2549,7 +2555,7 @@ const Player = {
 
     // Glow halo (double layer for richness)
     ctx.shadowColor = CONFIG.NEON_COLOR;
-    ctx.shadowBlur  = 22 + glowBonus;
+    ctx.shadowBlur  = 28 + glowBonus;
 
     // Triângulo
     ctx.beginPath();
@@ -2560,10 +2566,9 @@ const Player = {
     ctx.closePath();
 
     const nc = CONFIG.NEON_COLOR;
-    ctx.strokeStyle = nc;
+    ctx.strokeStyle = CONFIG.NEON_COLOR;
     ctx.lineWidth   = 2.5;
-    ctx.fillStyle   = nc.replace('#', 'rgba(').replace(/(..)(..)(..)/, (_, r, g, b) =>
-      parseInt(r,16) + ',' + parseInt(g,16) + ',' + parseInt(b,16)) + ',0.15)';
+    ctx.fillStyle   = 'rgba(0,238,255,0.18)';
     // Simpler fill — just use transparent color
     ctx.fillStyle = 'rgba(0,200,255,0.13)';
     ctx.fill();
@@ -2779,7 +2784,7 @@ const Enemies = {
     for (const e of this.pool) {
       ctx.save();
       const glowMult = (e.type === 'electric') ? (1 + Math.sin(e.electricPulse) * 0.5) : 1;
-      ctx.shadowColor = e.glow || 'rgba(200,0,255,0.8)';
+      ctx.shadowColor = e.glow || 'rgba(255,0,200,0.9)';
       ctx.shadowBlur  = (14 + (e.size - 20) * 0.5) * glowMult;
       // Electric flicker
       if (e.type === 'electric') ctx.globalAlpha = 0.85 + Math.sin(e.electricPulse * 2) * 0.15;
@@ -2990,8 +2995,8 @@ const UI = {
 
     // --- Score ---
     ctx.font      = 'bold 22px "Courier New"';
-    ctx.fillStyle = CONFIG.NEON_COLOR;
-    ctx.shadowColor = CONFIG.NEON_COLOR;
+    ctx.fillStyle = '#ffdd00';
+    ctx.shadowColor = '#ffdd00';
     ctx.shadowBlur  = 10;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -3013,7 +3018,8 @@ const UI = {
 
     // --- Tempo ---
     ctx.font      = 'bold 22px "Courier New"';
-    ctx.fillStyle = CONFIG.NEON_COLOR;
+    ctx.fillStyle = '#00ff88';
+    ctx.shadowColor = '#00ff88';
     ctx.shadowBlur = 10;
     ctx.textAlign = 'center';
     ctx.fillText(this.formatTime(Game.elapsed), CONFIG.TARGET_W / 2, pad);
@@ -3134,34 +3140,37 @@ const UI = {
     const cx = CONFIG.TARGET_W / 2;
     ctx.textAlign   = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = CONFIG.NEON_COLOR;
+    ctx.shadowColor = '#00eeff';
     ctx.shadowBlur  = 40;
     ctx.font        = 'bold 72px "Courier New"';
-    ctx.fillStyle   = CONFIG.NEON_COLOR;
+    ctx.fillStyle   = '#00eeff';
     ctx.fillText('NEON', cx, CONFIG.TARGET_H / 2 - 80);
 
     ctx.font      = 'bold 72px "Courier New"';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 20;
+    ctx.fillStyle = '#ff00cc';
+    ctx.shadowColor = '#ff00cc';
+    ctx.shadowBlur = 28;
     ctx.fillText('SIEGE', cx, CONFIG.TARGET_H / 2 - 10);
 
     // Subtítulo
     ctx.font      = '14px "Courier New"';
-    ctx.fillStyle = CONFIG.NEON_DIM;
-    ctx.shadowBlur = 6;
+    ctx.fillStyle = '#ffdd00';
+    ctx.shadowColor = '#ffdd00';
+    ctx.shadowBlur  = 8;
     ctx.fillText('ARCADE · SURVIVAL · WAVE', cx, CONFIG.TARGET_H / 2 + 48);
 
     // Botão PLAY
     const bw2 = 180, bh2 = 52, bx = cx - bw2/2, by = CONFIG.TARGET_H/2 + 90;
+    ctx.strokeStyle = '#00ff88';
+    ctx.shadowColor = '#00ff88';
     ctx.shadowBlur  = 20;
-    ctx.shadowColor = CONFIG.NEON_COLOR;
-    ctx.strokeStyle = CONFIG.NEON_COLOR;
     ctx.lineWidth   = 2;
-    ctx.fillStyle   = 'rgba(0,200,255,0.1)';
+    ctx.fillStyle   = 'rgba(0,255,136,0.12)';
     this._roundRect(bx, by, bw2, bh2, 6);
     ctx.fill(); ctx.stroke();
     ctx.shadowBlur  = 10;
-    ctx.fillStyle   = CONFIG.NEON_COLOR;
+    ctx.fillStyle   = '#00ff88';
+    ctx.shadowColor = '#00ff88';
     ctx.font        = 'bold 22px "Courier New"';
     ctx.fillText('▶  PLAY', cx, by + bh2/2);
 
@@ -7364,20 +7373,20 @@ const ArenaSystem = {
 
   _ARENAS: {
     cyberpunk: {
-      bg: '#030a12', gridColor: 'rgba(0,150,200,0.07)',
-      borderColor: 'rgba(0,200,255,0.55)', cornerColor: '#00c8ff',
+      bg: '#020810', gridColor: 'rgba(0,200,255,0.09)',
+      borderColor: 'rgba(0,238,255,0.70)', cornerColor: '#00eeff',
     },
     space: {
-      bg: '#01010a', gridColor: 'rgba(100,80,200,0.06)',
-      borderColor: 'rgba(140,80,255,0.55)', cornerColor: '#aa55ff',
+      bg: '#04010a', gridColor: 'rgba(170,0,255,0.09)',
+      borderColor: 'rgba(170,0,255,0.65)', cornerColor: '#aa00ff',
     },
     lab: {
-      bg: '#010a08', gridColor: 'rgba(0,200,100,0.06)',
-      borderColor: 'rgba(0,255,140,0.50)', cornerColor: '#00ff88',
+      bg: '#010a06', gridColor: 'rgba(0,255,136,0.09)',
+      borderColor: 'rgba(0,255,136,0.60)', cornerColor: '#00ff88',
     },
     digital: {
-      bg: '#060210', gridColor: 'rgba(200,0,200,0.06)',
-      borderColor: 'rgba(220,0,220,0.50)', cornerColor: '#dd00dd',
+      bg: '#080010', gridColor: 'rgba(255,0,200,0.09)',
+      borderColor: 'rgba(255,0,200,0.60)', cornerColor: '#ff00cc',
     },
   },
 
