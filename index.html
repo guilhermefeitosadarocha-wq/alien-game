@@ -1497,6 +1497,72 @@
     color: #00ffcc;
     box-shadow: 0 0 22px rgba(0,200,255,0.4);
   }
+
+/* ── TELA DE NOME DO JOGADOR ── */
+#nameScreen {
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+}
+#nameScreen.visible { display: flex; }
+#namePanel {
+  background: rgba(2,12,24,0.98);
+  border: 1.5px solid rgba(0,200,255,0.40);
+  border-radius: 16px;
+  padding: 36px 32px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 18px;
+  width: min(380px, 90vw);
+  box-shadow: 0 0 60px rgba(0,200,255,0.15);
+  animation: settingsSlideIn 0.25s cubic-bezier(.22,.68,0,1.2);
+}
+#nameTitle {
+  font-family: 'Courier New', monospace;
+  font-size: 18px; font-weight: bold;
+  letter-spacing: 0.16em; color: #00c8ff;
+  text-shadow: 0 0 14px rgba(0,200,255,0.7);
+}
+#nameSubtitle {
+  font-family: 'Courier New', monospace;
+  font-size: 11px; color: rgba(0,200,255,0.45);
+  letter-spacing: 0.08em; text-align: center;
+}
+#nameInput {
+  width: 100%; padding: 12px 16px;
+  background: rgba(0,200,255,0.06);
+  border: 1.5px solid rgba(0,200,255,0.40);
+  border-radius: 8px; outline: none;
+  font-family: 'Courier New', monospace;
+  font-size: 16px; font-weight: bold;
+  color: #00c8ff; letter-spacing: 0.08em;
+  text-align: center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#nameInput:focus {
+  border-color: rgba(0,200,255,0.75);
+  box-shadow: 0 0 20px rgba(0,200,255,0.25);
+}
+#nameInput::placeholder { color: rgba(0,200,255,0.25); }
+#nameConfirmBtn {
+  width: 100%; padding: 13px;
+  border-radius: 9px;
+  border: 1.5px solid rgba(0,255,160,0.45);
+  background: rgba(0,255,160,0.07);
+  color: #00ffaa; font-family: 'Courier New', monospace;
+  font-size: 14px; font-weight: bold;
+  letter-spacing: 0.10em; cursor: pointer;
+  transition: all 0.15s;
+}
+#nameConfirmBtn:hover {
+  background: rgba(0,255,160,0.16);
+  box-shadow: 0 0 22px rgba(0,255,160,0.25);
+}
+#nameConfirmBtn:active { transform: scale(0.97); }
+#nameCharCount {
+  font-family: 'Courier New', monospace;
+  font-size: 10px; color: rgba(0,200,255,0.35);
+}
 </style>
 </head>
 <body>
@@ -1847,6 +1913,18 @@
 </div>
 <div id="anchorCooldownBadge">⚓ ÂNCORA: RECARREGANDO</div>
 <button id="anchorPulseBtn" title="Pulse Aniquilador">💥</button>
+<!-- TELA DE NOME DO JOGADOR -->
+<div id="nameScreen">
+  <div id="namePanel">
+    <div id="nameTitle">◈ IDENTIFICAÇÃO</div>
+    <div id="nameSubtitle">Seu nome aparecerá no ranking global</div>
+    <input id="nameInput" type="text" maxlength="20"
+      placeholder="Digite seu nome..." autocomplete="off" spellcheck="false">
+    <div id="nameCharCount">0 / 20 caracteres</div>
+    <button id="nameConfirmBtn">▶  ENTRAR NO RANKING</button>
+  </div>
+</div>
+
 <!-- MOBILE CONTROLS — sempre presentes -->
 <div id="mobileControls">
   <div id="joystickZone">
@@ -7355,14 +7433,20 @@ const MatchModifiers = {
       list.appendChild(row);
     });
     document.getElementById('modifierStartBtn').addEventListener('click', () => {
-      const nome = prompt('Digite seu nome para o ranking:', SupabaseSystem._playerName);
-      if (nome && nome.trim().length > 0) {
-        SupabaseSystem._playerName = nome.trim().slice(0, 20);
-      }
       this.applySelected();
       this._overlay.classList.remove('visible');
-      SFX.play('game_start');
-      Game.start();
+      // Verifica se já tem nome salvo
+      const jaTemNome = NameScreen.loadSavedName();
+      if (jaTemNome) {
+        // Já tem nome — inicia direto
+        SFX.play('game_start');
+        Game.start();
+      } else {
+        // Primeira vez — mostra tela de nome
+        NameScreen.show(() => {
+          Game.start();
+        });
+      }
     });
   },
 
@@ -8650,6 +8734,87 @@ const HighScoreSystem = {
 };
 
 // ═══════════════════════════════════════════════════════════
+//  NAME SCREEN SYSTEM
+//  Tela elegante para o jogador digitar o nome antes de jogar.
+// ═══════════════════════════════════════════════════════════
+const NameScreen = {
+  _overlay:    null,
+  _input:      null,
+  _confirmBtn: null,
+  _charCount:  null,
+  _onConfirm:  null,   // callback chamado após confirmar o nome
+
+  init() {
+    this._overlay    = document.getElementById('nameScreen');
+    this._input      = document.getElementById('nameInput');
+    this._confirmBtn = document.getElementById('nameConfirmBtn');
+    this._charCount  = document.getElementById('nameCharCount');
+
+    // Atualiza contador de caracteres
+    this._input.addEventListener('input', () => {
+      const len = this._input.value.length;
+      this._charCount.textContent = len + ' / 20 caracteres';
+      this._charCount.style.color = len >= 18
+        ? 'rgba(255,100,0,0.7)' : 'rgba(0,200,255,0.35)';
+    });
+
+    // Confirma com Enter
+    this._input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') this._confirm();
+    });
+
+    // Confirma com botão
+    this._confirmBtn.addEventListener('click', () => this._confirm());
+  },
+
+  // Abre a tela de nome e chama onConfirm quando concluído
+  show(onConfirm) {
+    this._onConfirm = onConfirm;
+    this._overlay.classList.add('visible');
+    // Foca automaticamente no input
+    setTimeout(() => { if (this._input) this._input.focus(); }, 100);
+    SFX.play('menu_open');
+  },
+
+  hide() {
+    this._overlay.classList.remove('visible');
+  },
+
+  _confirm() {
+    const nome = this._input.value.trim();
+    if (nome.length === 0) {
+      // Destaca o input se vazio
+      this._input.style.borderColor = 'rgba(255,60,60,0.7)';
+      this._input.placeholder = 'Digite seu nome!';
+      setTimeout(() => {
+        this._input.style.borderColor = '';
+        this._input.placeholder = 'Digite seu nome...';
+      }, 1200);
+      return;
+    }
+    SupabaseSystem._playerName = nome;
+    // Salva nome no localStorage para não perguntar toda vez
+    try { localStorage.setItem('neonSiege_playerName', nome); } catch (e) {}
+    this.hide();
+    SFX.play('game_start');
+    if (this._onConfirm) this._onConfirm();
+  },
+
+  // Carrega nome salvo do localStorage
+  loadSavedName() {
+    try {
+      const saved = localStorage.getItem('neonSiege_playerName');
+      if (saved) {
+        SupabaseSystem._playerName = saved;
+        if (this._input) this._input.value = saved;
+        return true;   // já tem nome salvo
+      }
+    } catch (e) {}
+    return false;   // nunca digitou nome
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
 // Unlock AudioContext no primeiro gesto do usuário
@@ -8664,6 +8829,7 @@ const HighScoreSystem = {
 ControlSettings.load(SaveSystem.load());
 HighScoreSystem.load();
 SupabaseSystem.init();
+NameScreen.init();
 
 Input._init();
 Mobile._init();
