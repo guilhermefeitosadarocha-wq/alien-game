@@ -3938,6 +3938,12 @@ const Game = {
     ChaosMode.reset();
     SlowMotion.reset();
     MultiplayerSystem.clear();
+    // Esconde HUD/badge do Modo Âncora ao acabar o jogo (cooldown congela aqui)
+    if (typeof AnchorMode !== 'undefined' && AnchorMode._hudEl) {
+      AnchorMode._hudEl.classList.remove('visible');
+      if (AnchorMode._cdBadgeEl)  AnchorMode._cdBadgeEl.classList.remove('visible');
+      if (AnchorMode._pulseBtnEl) AnchorMode._pulseBtnEl.classList.remove('visible');
+    }
   },
 
   togglePause() {
@@ -8622,7 +8628,7 @@ const AnchorMode = {
 
     // Cooldown badge (quando não ativo mas em cooldown)
     if (this._cdBadgeEl) {
-      this._cdBadgeEl.classList.toggle('visible', !show && this.cooldown > 0);
+      this._cdBadgeEl.classList.toggle('visible', !show && this.cooldown > 0 && Game.state === 'playing');
     }
 
     if (show) {
@@ -9484,6 +9490,7 @@ const GameOverDOM = {
       if (bb) bb.classList.remove('visible');
       EnergySystem.showBar(false);
       ComboSystem.reset();
+      if (typeof AnchorMode !== 'undefined') AnchorMode.reset();
       MultiplayerSystem.clear();
       Game.score   = 0;
       Game.elapsed = 0;
