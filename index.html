@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
 <title>NEON SIEGE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1736,6 +1739,195 @@
   transition: opacity 0.3s;
 }
 #profileFeedback.visible { opacity: 1; }
+/* ── GAME OVER DOM OVERLAY ── */
+#gameOverDOM {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 4vh, 28px);
+  padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+  text-align: center;
+  background:
+    radial-gradient(ellipse at center, rgba(5,6,13,.55), rgba(5,6,13,.95)),
+    linear-gradient(rgba(40,80,120,.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(40,80,120,.18) 1px, transparent 1px);
+  background-size: 100% 100%, 48px 48px, 48px 48px;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  animation: goFadeIn .45s ease both;
+}
+#gameOverDOM.visible { display: flex; }
+
+@keyframes goFadeIn { from{opacity:0} to{opacity:1} }
+@keyframes goDropIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@keyframes goFlicker {
+  0%,18%,22%,25%,53%,57%,100%{opacity:1}
+  20%,24%,55%{opacity:.78}
+}
+@keyframes goPulseGold { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+#goTitle {
+  font-family: 'Orbitron', 'Courier New', sans-serif;
+  font-weight: 900;
+  font-size: clamp(40px, 13vw, 88px);
+  letter-spacing: .08em;
+  color: #fff;
+  text-shadow: 0 0 8px #ff2e4d, 0 0 24px #ff2e4d, 0 0 52px rgba(255,46,77,.7);
+  animation: goFlicker 3.2s infinite, goDropIn .5s .05s ease both;
+}
+
+#goScoreBlock {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  animation: goDropIn .5s .15s ease both;
+}
+#goScoreLabel {
+  font-size: clamp(12px, 3.2vw, 16px);
+  letter-spacing: .35em;
+  color: #25e6ff;
+  text-transform: uppercase;
+  opacity: .85;
+}
+#goScoreValue {
+  font-family: 'Orbitron', 'Courier New', sans-serif;
+  font-weight: 700;
+  font-size: clamp(64px, 22vw, 150px);
+  line-height: .9;
+  color: #fff;
+  text-shadow: 0 0 14px #25e6ff, 0 0 40px rgba(37,230,255,.6);
+}
+
+#goMeta {
+  display: flex; align-items: center; justify-content: center;
+  gap: clamp(14px, 5vw, 30px);
+  flex-wrap: wrap;
+  font-size: clamp(13px, 3.6vw, 17px);
+  color: #7da3c0;
+  animation: goDropIn .5s .25s ease both;
+}
+#goMeta .go-item { display: flex; align-items: center; gap: 7px; }
+#goMeta .go-num  { color: #dff3ff; }
+#goNewRecord {
+  color: #ffcf3a;
+  text-shadow: 0 0 10px rgba(255,207,58,.7);
+  animation: goPulseGold 1.1s infinite;
+}
+
+#goActions {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; width: 100%; max-width: 340px;
+  margin-top: clamp(4px, 2vh, 14px);
+  animation: goDropIn .5s .35s ease both;
+}
+.go-btn {
+  width: 100%;
+  font-family: 'Orbitron', 'Courier New', sans-serif;
+  font-weight: 700;
+  font-size: clamp(15px, 4.2vw, 19px);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 15px 18px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: transparent;
+  color: #eaf6ff;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .2s ease, background .2s ease;
+}
+.go-btn:active { transform: scale(.96); }
+#goBtnRestart {
+  background: linear-gradient(180deg, rgba(37,230,255,.20), rgba(37,230,255,.06));
+  border-color: #25e6ff;
+  color: #eaffff;
+  box-shadow: 0 0 18px rgba(37,230,255,.35), inset 0 0 14px rgba(37,230,255,.18);
+}
+#goBtnRestart:hover { box-shadow: 0 0 26px rgba(37,230,255,.6), inset 0 0 18px rgba(37,230,255,.25); }
+#goBtnMenu {
+  border-color: rgba(125,163,192,.45);
+  color: #7da3c0;
+}
+#goBtnMenu:hover { border-color: #7da3c0; color: #cfe6f5; }
+#goBtnRanking {
+  background: none; border: none; cursor: pointer;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: clamp(13px, 3.6vw, 15px);
+  letter-spacing: .18em;
+  color: #ff3df0;
+  text-transform: uppercase;
+  opacity: .85;
+  padding: 8px;
+  transition: opacity .2s, text-shadow .2s;
+}
+#goBtnRanking:hover { opacity: 1; text-shadow: 0 0 12px rgba(255,61,240,.7); }
+
+/* ── MODAL DE RANKING ── */
+#rankingModal {
+  position: fixed; inset: 0; z-index: 960;
+  display: none;
+  align-items: center; justify-content: center;
+  padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+  background: rgba(3,4,10,.78);
+  backdrop-filter: blur(4px);
+}
+#rankingModal.open { display: flex; animation: goFadeIn .25s ease both; }
+#rankingCard {
+  width: 100%; max-width: 420px;
+  max-height: 86vh;
+  display: flex; flex-direction: column;
+  background: rgba(10,16,30,.82);
+  border: 1.5px solid rgba(37,230,255,.35);
+  border-radius: 16px;
+  box-shadow: 0 0 40px rgba(37,230,255,.25);
+  overflow: hidden;
+  animation: goDropIn .35s ease both;
+}
+#rankingHead {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(37,230,255,.18);
+}
+#rankingHead h2 {
+  font-family: 'Orbitron', 'Courier New', sans-serif;
+  font-weight: 700; font-size: 17px; letter-spacing: .12em;
+  color: #25e6ff;
+  text-shadow: 0 0 12px rgba(37,230,255,.5);
+}
+#rankingCloseBtn {
+  background: none; border: none; cursor: pointer;
+  color: #7da3c0; font-size: 26px; line-height: 1;
+  padding: 0 4px; transition: color .15s, transform .15s;
+}
+#rankingCloseBtn:hover { color: #fff; transform: scale(1.1); }
+#rankingList {
+  list-style: none;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+#rankingList li {
+  display: grid;
+  grid-template-columns: 34px 1fr auto auto;
+  align-items: center; gap: 10px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  font-size: 14px;
+  background: rgba(255,255,255,.02);
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+}
+#rankingList li .rk-pos  { color: #7da3c0; font-weight: bold; text-align: center; }
+#rankingList li .rk-name { color: #dff3ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#rankingList li .rk-pts  { color: #25e6ff; }
+#rankingList li .rk-time { color: #7da3c0; font-size: 12px; }
+#rankingList li.rk-top .rk-pos { color: #ffcf3a; }
+#rankingList li.rk-me {
+  background: rgba(255,61,240,.12);
+  border: 1px solid rgba(255,61,240,.45);
+  box-shadow: inset 0 0 14px rgba(255,61,240,.12);
+}
+#rankingList li.rk-me .rk-name { color: #ff3df0; }
+#rankingList li.rk-me .rk-pts  { color: #ff3df0; }
 </style>
 </head>
 <body>
@@ -2166,6 +2358,37 @@
       placeholder="Digite seu nome..." autocomplete="off" spellcheck="false">
     <div id="nameCharCount">0 / 20 caracteres</div>
     <button id="nameConfirmBtn">▶  ENTRAR NO RANKING</button>
+  </div>
+</div>
+
+<!-- ── GAME OVER DOM OVERLAY ── -->
+<div id="gameOverDOM">
+  <h1 id="goTitle">GAME OVER</h1>
+  <div id="goScoreBlock">
+    <span id="goScoreLabel">SCORE</span>
+    <span id="goScoreValue">0</span>
+  </div>
+  <div id="goMeta">
+    <span class="go-item" id="goRecordWrap">
+      🏆 Recorde <span class="go-num" id="goRecordValue">0</span>
+    </span>
+    <span class="go-item">⏱ <span class="go-num" id="goTimeValue">00:00</span></span>
+  </div>
+  <div id="goActions">
+    <button class="go-btn" id="goBtnRestart">↻ REINICIAR</button>
+    <button class="go-btn" id="goBtnMenu">MENU</button>
+    <button id="goBtnRanking">◆ Ver ranking global</button>
+  </div>
+</div>
+
+<!-- ── MODAL DE RANKING ── -->
+<div id="rankingModal">
+  <div id="rankingCard">
+    <div id="rankingHead">
+      <h2>◆ Ranking Global</h2>
+      <button id="rankingCloseBtn" aria-label="Fechar">×</button>
+    </div>
+    <ul id="rankingList"></ul>
   </div>
 </div>
 
@@ -3448,78 +3671,13 @@ const UI = {
   },
 
   drawGameOver() {
+    // Fundo escuro simples — a tela real é o overlay DOM (#gameOverDOM)
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.82)';
+    ctx.fillStyle = 'rgba(0,0,0,0.92)';
     ctx.fillRect(0, 0, CONFIG.TARGET_W, CONFIG.TARGET_H);
-
-    const cx = CONFIG.TARGET_W / 2;
-    ctx.textAlign   = 'center';
-    ctx.textBaseline = 'middle';
-
-    ctx.shadowColor = '#ff2244';
-    ctx.shadowBlur  = 40;
-    ctx.font        = 'bold 64px "Courier New"';
-    ctx.fillStyle   = '#ff2244';
-    ctx.fillText('GAME OVER', cx, CONFIG.TARGET_H/2 - 90);
-
-    ctx.shadowColor = CONFIG.NEON_COLOR;
-    ctx.shadowBlur  = 16;
-    ctx.font        = '24px "Courier New"';
-    ctx.fillStyle   = CONFIG.NEON_COLOR;
-    ctx.fillText(`SCORE: ${Game.score}`, cx, CONFIG.TARGET_H/2 - 18);
-
-    // Recorde de pontuação
-    const isNewScore = HighScoreSystem._isNewScore && Game.score > 0;
-    ctx.font        = '14px "Courier New"';
-    ctx.fillStyle   = isNewScore ? '#ffdd00' : CONFIG.NEON_DIM;
-    ctx.shadowColor = '#ffdd00';
-    ctx.shadowBlur  = isNewScore ? 14 : 0;
-    ctx.fillText(
-      (isNewScore ? '★ ' : '') + 'RECORDE PONTOS: ' + HighScoreSystem.highScore,
-      cx,
-      CONFIG.TARGET_H / 2 + 10
-    );
-    // Recorde de tempo
-    const isNewTime = HighScoreSystem._isNewTime;
-    ctx.font        = '14px "Courier New"';
-    ctx.fillStyle   = isNewTime ? '#ffdd00' : CONFIG.NEON_DIM;
-    ctx.shadowColor = '#ffdd00';
-    ctx.shadowBlur  = isNewTime ? 14 : 0;
-    ctx.fillText(
-      (isNewTime ? '★ ' : '') + 'RECORDE TEMPO: ' + HighScoreSystem._formatTime(HighScoreSystem.highTime),
-      cx,
-      CONFIG.TARGET_H / 2 + 32
-    );
-    // Na primeira partida exibe mensagem especial no game over
-    if (HighScoreSystem._isFirstGame || (HighScoreSystem._isNewScore && !HighScoreSystem._notified)) {
-      ctx.font        = '13px "Courier New"';
-      ctx.fillStyle   = '#ffdd00';
-      ctx.shadowColor = '#ffdd00';
-      ctx.shadowBlur  = 12;
-      ctx.fillText('★ Parabéns! Este é seu primeiro recorde! ★', cx, CONFIG.TARGET_H / 2 + 58);
-    }
-
-    ctx.font      = '16px "Courier New"';
-    ctx.fillStyle = CONFIG.NEON_DIM;
-    ctx.shadowBlur = 0;
-    ctx.fillText(`TEMPO: ${this.formatTime(Game.elapsed)}`, cx, CONFIG.TARGET_H/2 + 20);
-
-    // Botão Restart
-    const bw2 = 200, bh2 = 52, bx = cx - bw2/2, by = CONFIG.TARGET_H/2 + 60;
-    ctx.shadowBlur  = 18;
-    ctx.shadowColor = CONFIG.NEON_COLOR;
-    ctx.strokeStyle = CONFIG.NEON_COLOR;
-    ctx.lineWidth   = 2;
-    ctx.fillStyle   = 'rgba(0,200,255,0.1)';
-    this._roundRect(bx, by, bw2, bh2, 6);
-    ctx.fill(); ctx.stroke();
-    ctx.fillStyle   = CONFIG.NEON_COLOR;
-    ctx.shadowBlur  = 10;
-    ctx.font        = 'bold 20px "Courier New"';
-    ctx.fillText('↺  RESTART', cx, by + bh2/2);
-
     ctx.restore();
-    this._gameOverBtnRect = { x: bx, y: by, w: bw2, h: bh2 };
+    // Botão rect zerado — cliques gerenciados pelo DOM
+    this._gameOverBtnRect = null;
   },
 
   _menuBtnRect: null,
@@ -3549,10 +3707,7 @@ const UI = {
   },
 
   clickGameOver(wx, wy) {
-    const b = this._gameOverBtnRect;
-    if (b && wx >= b.x && wx <= b.x + b.w && wy >= b.y && wy <= b.y + b.h) {
-      Game.restart();
-    }
+    // Cliques gerenciados pelo overlay DOM (#gameOverDOM)
   },
 
   // Dash cooldown arc drawn in canvas HUD (called after Player.draw)
@@ -3735,6 +3890,7 @@ const Game = {
     CriticalSystem.reset();
     MatchModifiers.reset();
     AnchorMode.reset();
+    if (typeof GameOverDOM !== 'undefined') GameOverDOM.hide();
     HighScoreSystem.reset();
     EnergySystem.showBar(true);
     // Multiplayer reset
@@ -3758,6 +3914,8 @@ const Game = {
 
   gameOver() {
     this.state = 'gameover';
+    // Mostra tela de game over DOM após delay para efeitos canvas terminarem
+    setTimeout(() => { if (typeof GameOverDOM !== 'undefined') GameOverDOM.show(); }, 400);
     HighScoreSystem.check(this.score, this.elapsed);
     HighScoreSystem.save();
     if (typeof SupabaseSystem !== 'undefined') {
@@ -8765,24 +8923,34 @@ const SupabaseSystem = {
   },
 
   // ── Carrega o ranking do banco ───────────────────────────
-  async loadRanking() {
+  // ── Carrega o ranking do banco ──
+  // apikey vai na URL e SEM cabeçalhos customizados → requisição "simples",
+  // sem preflight CORS. Funciona em GitHub Pages, Live Server e file://.
+  loadRanking() {
     if (!this._initialized) return;
-    try {
-      const response = await fetch(
-        this._URL + '/rest/v1/recordes?select=nome,score,tempo&order=score.desc&limit=10',
-        {
-          headers: {
-            'apikey': this._KEY,
-            'Authorization': 'Bearer ' + this._KEY,
-          },
+    const url = this._URL
+      + '/rest/v1/recordes?select=nome,score,tempo&order=score.desc&limit=10'
+      + '&apikey=' + encodeURIComponent(this._KEY);
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          this._ranking = JSON.parse(xhr.responseText) || [];
+          // Se o modal de ranking estiver aberto, atualiza a lista na hora
+          if (typeof GameOverDOM !== 'undefined' && GameOverDOM._rankingModal
+              && GameOverDOM._rankingModal.classList.contains('open')) {
+            GameOverDOM._renderRanking();
+          }
+        } catch (e) {
+          console.warn('Ranking: resposta inválida', e);
         }
-      );
-      if (response.ok) {
-        this._ranking = await response.json();
+      } else {
+        console.warn('Erro ao carregar ranking:', xhr.status, xhr.responseText);
       }
-    } catch (e) {
-      console.warn('Erro ao carregar ranking:', e);
-    }
+    };
+    xhr.onerror = () => { console.warn('Erro de rede ao carregar ranking'); };
+    xhr.send();
   },
 
   // ── Formata tempo em mm:ss ───────────────────────────────
@@ -9274,6 +9442,152 @@ const NameScreen = {
 };
 
 // ═══════════════════════════════════════════════════════════
+//  GAME OVER DOM SYSTEM
+//  Tela de game over como overlay DOM com ranking modal.
+// ═══════════════════════════════════════════════════════════
+const GameOverDOM = {
+  _overlay:     null,
+  _scoreVal:    null,
+  _recordWrap:  null,
+  _recordVal:   null,
+  _timeVal:     null,
+  _rankingModal:null,
+  _rankingList: null,
+
+  init() {
+    this._overlay      = document.getElementById('gameOverDOM');
+    this._scoreVal     = document.getElementById('goScoreValue');
+    this._recordWrap   = document.getElementById('goRecordWrap');
+    this._recordVal    = document.getElementById('goRecordValue');
+    this._timeVal      = document.getElementById('goTimeValue');
+    this._rankingModal = document.getElementById('rankingModal');
+    this._rankingList  = document.getElementById('rankingList');
+
+    // Botão reiniciar
+    document.getElementById('goBtnRestart').addEventListener('click', () => {
+      this.hide();
+      Game.restart();
+    });
+
+    // Botão menu
+    document.getElementById('goBtnMenu').addEventListener('click', () => {
+      this.hide();
+      // Volta ao menu sem reiniciar — reseta estado
+      Bullets.clear();
+      EnemyBullets.clear();
+      Enemies.reset();
+      Particles.clear();
+      FloatText.clear();
+      Player.reset();
+      PlayerMovement.reset();
+      BossSystem.reset();
+      const bb = document.getElementById('bossBar');
+      if (bb) bb.classList.remove('visible');
+      EnergySystem.showBar(false);
+      ComboSystem.reset();
+      MultiplayerSystem.clear();
+      Game.score   = 0;
+      Game.elapsed = 0;
+      Game.state   = 'menu';
+      PauseUI.syncPauseBtn('menu');
+      const _sb = document.getElementById('settingsBtn');
+      if (_sb) _sb.classList.add('visible');
+      MultiplayerSystem.showToggleBtn(true);
+      const _pb = document.getElementById('profileMenuBtn');
+      if (_pb) { _pb.style.opacity = '1'; _pb.style.pointerEvents = 'all'; }
+    });
+
+    // Botão ver ranking
+    document.getElementById('goBtnRanking').addEventListener('click', () => {
+      this._openRanking();
+    });
+
+    // Fechar modal ranking
+    document.getElementById('rankingCloseBtn').addEventListener('click', () => {
+      this._closeRanking();
+    });
+    this._rankingModal.addEventListener('click', e => {
+      if (e.target === this._rankingModal) this._closeRanking();
+    });
+  },
+
+  // Exibe a tela de game over com os dados da partida
+  show() {
+    const score     = Game.score;
+    const highScore = HighScoreSystem.highScore;
+    const isNew     = HighScoreSystem._isNewScore && score > 0;
+    const time      = UI.formatTime(Game.elapsed);
+
+    // Score principal
+    if (this._scoreVal) this._scoreVal.textContent = score;
+
+    // Tempo
+    if (this._timeVal) this._timeVal.textContent = time;
+
+    // Recorde
+    if (this._recordWrap) {
+      if (isNew) {
+        this._recordWrap.innerHTML =
+          '<span id="goNewRecord" style="color:#ffcf3a;text-shadow:0 0 10px rgba(255,207,58,.7);animation:goPulseGold 1.1s infinite">★ NOVO RECORDE! ' + score + '</span>';
+      } else if (highScore > 0) {
+        this._recordWrap.innerHTML =
+          '🏆 Recorde <span class="go-num" id="goRecordValue">' + highScore + '</span>';
+      } else {
+        this._recordWrap.innerHTML = '';
+      }
+    }
+
+    // Mostra overlay
+    if (this._overlay) this._overlay.classList.add('visible');
+  },
+
+  hide() {
+    if (this._overlay) this._overlay.classList.remove('visible');
+    this._closeRanking();
+  },
+
+  _openRanking() {
+    this._renderRanking();
+    if (this._rankingModal) this._rankingModal.classList.add('open');
+  },
+
+  _closeRanking() {
+    if (this._rankingModal) this._rankingModal.classList.remove('open');
+  },
+
+  _renderRanking() {
+    if (!this._rankingList) return;
+    const list    = (typeof SupabaseSystem !== 'undefined') ? SupabaseSystem._ranking : [];
+    const myName  = (typeof SupabaseSystem !== 'undefined') ? SupabaseSystem._playerName : '';
+    this._rankingList.innerHTML = '';
+
+    if (list.length === 0) {
+      const li = document.createElement('li');
+      li.style.cssText = 'justify-content:center;color:#7da3c0;padding:24px';
+      li.textContent = 'Nenhum recorde ainda. Seja o primeiro!';
+      this._rankingList.appendChild(li);
+      return;
+    }
+
+    list.forEach((row, i) => {
+      const li = document.createElement('li');
+      if (i < 3) li.classList.add('rk-top');
+      if (myName && row.nome === myName) li.classList.add('rk-me');
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+      const tempo = typeof SupabaseSystem._formatTime === 'function'
+        ? SupabaseSystem._formatTime(row.tempo)
+        : row.tempo;
+      li.innerHTML =
+        `<span class="rk-pos">${medal}</span>` +
+        `<span class="rk-name">${row.nome}</span>` +
+        `<span class="rk-pts">${row.score || row.pontuacao}pts</span>` +
+        `<span class="rk-time">${tempo}</span>`;
+      this._rankingList.appendChild(li);
+    });
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
 // Unlock AudioContext no primeiro gesto do usuário
@@ -9320,6 +9634,7 @@ EnergySystem.init();
 MatchModifiers.init();
 MultiplayerSystem.init();
 AnchorMode.init();
+GameOverDOM.init();
 MobileExperience.init();
 requestAnimationFrame(ts => { Game.lastTime = ts; Game.loop(ts); });
 </script>
