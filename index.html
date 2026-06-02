@@ -1994,6 +1994,27 @@
   background: rgba(0,200,255,0.16);
   box-shadow: 0 0 16px rgba(0,200,255,0.25);
 }
+/* ── Botão X (voltar ao menu) na tela de Modificadores ── */
+#modifierPanel { position: relative; }
+#modifierCloseBtn {
+  position: absolute; top: 12px; right: 12px;
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,200,255,0.30);
+  background: rgba(0,10,20,0.6);
+  color: rgba(0,200,255,0.7);
+  font-size: 16px; line-height: 1; cursor: pointer;
+  font-family: 'Courier New', monospace;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  z-index: 2;
+}
+#modifierCloseBtn:hover {
+  background: rgba(0,200,255,0.14);
+  color: #00c8ff;
+  box-shadow: 0 0 12px rgba(0,200,255,0.25);
+}
+#modifierCloseBtn:active { transform: scale(0.92); }
 </style>
 </head>
 <body>
@@ -2319,6 +2340,7 @@
 <!-- Match Modifiers -->
 <div id="modifierOverlay">
   <div id="modifierPanel">
+    <button id="modifierCloseBtn" aria-label="Voltar ao menu">✕</button>
     <div id="modifierTitle">⚙ MODIFICADORES DE PARTIDA</div>
     <div id="modifierList"></div>
     <button id="modifierStartBtn">▶  INICIAR PARTIDA</button>
@@ -9796,6 +9818,24 @@ const MPModeSelect = {
 };
 
 // ═══════════════════════════════════════════════════════════
+//  MATCH MODIFIERS CLOSE — botão X que volta ao menu (módulo separado)
+//  Não altera MatchModifiers; apenas chama o hide() já existente.
+//  A tela aparece com o jogo no menu, então esconder já "volta ao menu".
+// ═══════════════════════════════════════════════════════════
+const MatchModifiersClose = {
+  init() {
+    const btn = document.getElementById('modifierCloseBtn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      if (typeof MatchModifiers !== 'undefined' && typeof MatchModifiers.hide === 'function') {
+        MatchModifiers.hide();
+      }
+      if (typeof SFX !== 'undefined') SFX.play('menu_close');
+    });
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
 // Unlock AudioContext no primeiro gesto do usuário
@@ -9841,6 +9881,7 @@ DifficultySystem.reset();
 SettingsUI.init();
 EnergySystem.init();
 MatchModifiers.init();
+MatchModifiersClose.init();
 MultiplayerSystem.init();
 MPModeSelect.init();
 AnchorMode.init();
