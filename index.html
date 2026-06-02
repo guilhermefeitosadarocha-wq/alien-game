@@ -1928,6 +1928,72 @@
 }
 #rankingList li.rk-me .rk-name { color: #ff3df0; }
 #rankingList li.rk-me .rk-pts  { color: #ff3df0; }
+/* ── APAGAR PERFIL — botão + confirmação ── */
+#profileDeleteBtn {
+  width: 100%; padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,40,80,0.45);
+  background: rgba(255,40,80,0.06);
+  color: rgba(255,90,110,0.9);
+  font-family: 'Courier New', monospace;
+  font-size: 11px; letter-spacing: 0.08em; cursor: pointer;
+  transition: all 0.15s;
+}
+#profileDeleteBtn:hover {
+  background: rgba(255,40,80,0.14);
+  color: #ff3355;
+  box-shadow: 0 0 14px rgba(255,40,80,0.25);
+}
+#profileDeleteConfirm {
+  position: absolute; inset: 0; z-index: 10;
+  display: none;
+  align-items: center; justify-content: center;
+  background: rgba(2,8,16,0.88);
+  border-radius: 16px;
+  backdrop-filter: blur(3px);
+}
+#profileDeleteConfirm.visible { display: flex; }
+#profileDeleteConfirmBox {
+  width: min(300px, 86%);
+  background: rgba(8,14,26,0.98);
+  border: 1.5px solid rgba(255,40,80,0.50);
+  border-radius: 14px;
+  padding: 24px 22px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  box-shadow: 0 0 32px rgba(255,40,80,0.22);
+  font-family: 'Courier New', monospace;
+}
+#profileDeleteConfirmTitle {
+  font-size: 16px; font-weight: bold; letter-spacing: 0.10em;
+  color: #ff4466; text-shadow: 0 0 12px rgba(255,40,80,0.6);
+}
+#profileDeleteConfirmMsg {
+  font-size: 11px; color: rgba(0,200,255,0.55);
+  text-align: center; line-height: 1.4;
+}
+#profileDeleteConfirmBtns { display: flex; gap: 10px; width: 100%; }
+#profileDeleteYes, #profileDeleteNo {
+  flex: 1; padding: 11px; border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px; font-weight: bold; letter-spacing: 0.10em;
+  cursor: pointer; transition: all 0.15s;
+}
+#profileDeleteYes {
+  border: 1.5px solid rgba(255,40,80,0.55);
+  background: rgba(255,40,80,0.10); color: #ff5577;
+}
+#profileDeleteYes:hover {
+  background: rgba(255,40,80,0.20);
+  box-shadow: 0 0 16px rgba(255,40,80,0.30);
+}
+#profileDeleteNo {
+  border: 1.5px solid rgba(0,200,255,0.45);
+  background: rgba(0,200,255,0.07); color: #00c8ff;
+}
+#profileDeleteNo:hover {
+  background: rgba(0,200,255,0.16);
+  box-shadow: 0 0 16px rgba(0,200,255,0.25);
+}
 </style>
 </head>
 <body>
@@ -2346,6 +2412,19 @@
       <button id="profileCloseBtn">✕ FECHAR</button>
     </div>
     <button id="profileResetBtn">⚠ RESETAR RECORDE LOCAL</button>
+    <button id="profileDeleteBtn">🗑 APAGAR PERFIL</button>
+
+    <!-- Confirmação de apagar perfil -->
+    <div id="profileDeleteConfirm">
+      <div id="profileDeleteConfirmBox">
+        <div id="profileDeleteConfirmTitle">Apagar perfil?</div>
+        <div id="profileDeleteConfirmMsg">Seu nome e avatar serão apagados. Tem certeza?</div>
+        <div id="profileDeleteConfirmBtns">
+          <button id="profileDeleteYes">SIM</button>
+          <button id="profileDeleteNo">NÃO</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -9594,6 +9673,53 @@ const GameOverDOM = {
 };
 
 // ═══════════════════════════════════════════════════════════
+//  PROFILE DELETE — apagar perfil com confirmação (módulo separado)
+//  Não altera o ProfileSystem; apenas lê suas chaves e atualiza a tela.
+// ═══════════════════════════════════════════════════════════
+const ProfileDelete = {
+  _confirmEl: null,
+
+  init() {
+    this._confirmEl = document.getElementById('profileDeleteConfirm');
+    const btnOpen = document.getElementById('profileDeleteBtn');
+    const btnYes  = document.getElementById('profileDeleteYes');
+    const btnNo   = document.getElementById('profileDeleteNo');
+    if (btnOpen) btnOpen.addEventListener('click', () => this._ask());
+    if (btnNo)   btnNo.addEventListener('click',   () => this._close());
+    if (btnYes)  btnYes.addEventListener('click',  () => this._doDelete());
+  },
+
+  _ask()   { if (this._confirmEl) this._confirmEl.classList.add('visible'); },
+  _close() { if (this._confirmEl) this._confirmEl.classList.remove('visible'); if (typeof SFX !== 'undefined') SFX.play('menu_close'); },
+
+  _doDelete() {
+    // Apaga as chaves de perfil (nome + avatar) usadas pelo ProfileSystem
+    try {
+      localStorage.removeItem(ProfileSystem._KEY_NAME);
+      localStorage.removeItem(ProfileSystem._KEY_AVATAR);
+    } catch (e) {}
+
+    // Volta o ProfileSystem ao padrão (nome em branco, avatar 🚀)
+    ProfileSystem._currentAvatar = '🚀';
+    if (ProfileSystem._avatarEl)  ProfileSystem._avatarEl.textContent = '🚀';
+    if (ProfileSystem._nameInput) ProfileSystem._nameInput.value = '';
+    if (ProfileSystem._pickerEl) {
+      ProfileSystem._pickerEl.querySelectorAll('.avatar-opt').forEach(o => {
+        o.classList.toggle('selected', o.dataset.emoji === '🚀');
+      });
+    }
+
+    // Sincroniza o nome do ranking de volta ao padrão
+    if (typeof SupabaseSystem !== 'undefined') SupabaseSystem._playerName = 'Jogador';
+
+    this._close();
+    if (typeof ProfileSystem._showFeedback === 'function')
+      ProfileSystem._showFeedback('Perfil apagado!');
+    if (typeof SFX !== 'undefined') SFX.play('shop_error');
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════
 // Unlock AudioContext no primeiro gesto do usuário
@@ -9610,6 +9736,7 @@ HighScoreSystem.load();
 SupabaseSystem.init();
 NameScreen.init();
 ProfileSystem.init();
+ProfileDelete.init();
 
 // Botão perfil no pause
 const _pauseProfileBtn = document.getElementById('pauseProfileBtn');
