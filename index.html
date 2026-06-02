@@ -9025,7 +9025,7 @@ const SupabaseSystem = {
   loadRanking() {
     if (!this._initialized) return;
     const url = this._URL
-      + '/rest/v1/recordes?select=nome,score,tempo&order=score.desc&limit=10'
+      + '/rest/v1/recordes?select=nome,score,tempo&order=score.desc&limit=100'
       + '&apikey=' + encodeURIComponent(this._KEY);
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
@@ -9654,17 +9654,31 @@ const GameOverDOM = {
 
   _renderRanking() {
     if (!this._rankingList) return;
-    const list    = (typeof SupabaseSystem !== 'undefined') ? SupabaseSystem._ranking : [];
+    const raw     = (typeof SupabaseSystem !== 'undefined') ? SupabaseSystem._ranking : [];
     const myName  = (typeof SupabaseSystem !== 'undefined') ? SupabaseSystem._playerName : '';
     this._rankingList.innerHTML = '';
 
-    if (list.length === 0) {
+    if (raw.length === 0) {
       const li = document.createElement('li');
       li.style.cssText = 'justify-content:center;color:#7da3c0;padding:24px';
       li.textContent = 'Nenhum recorde ainda. Seja o primeiro!';
       this._rankingList.appendChild(li);
       return;
     }
+
+    // Cada nome aparece UMA vez, com a melhor pontuação dele.
+    // (apenas filtra na exibição — não altera o banco nem o salvamento)
+    const best = {};
+    raw.forEach(r => {
+      const nome  = r.nome;
+      const score = (r.score != null ? r.score : r.pontuacao) || 0;
+      if (!(nome in best) || score > ((best[nome].score != null ? best[nome].score : best[nome].pontuacao) || 0)) {
+        best[nome] = r;
+      }
+    });
+    const list = Object.values(best)
+      .sort((a, b) => ((b.score != null ? b.score : b.pontuacao) || 0) - ((a.score != null ? a.score : a.pontuacao) || 0))
+      .slice(0, 10);
 
     list.forEach((row, i) => {
       const li = document.createElement('li');
