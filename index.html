@@ -8247,18 +8247,30 @@ const Player2 = {
     }
     P2Dash.update(dt);
 
-    // Mira automática: aponta para o inimigo mais próximo
-    let nearestEnemy = null, nearDist = Infinity;
-    Enemies.pool.forEach(e => {
-      const d = Util.dist(this, e);
-      if (d < nearDist) { nearDist = d; nearestEnemy = e; }
-    });
-    if (BossSystem.boss) {
-      const bd = Util.dist(this, BossSystem.boss);
-      if (bd < nearDist) nearestEnemy = BossSystem.boss;
-    }
-    if (nearestEnemy) {
-      this.angle = Math.atan2(nearestEnemy.y - this.y, nearestEnemy.x - this.x);
+    // Mira: no modo BOT ALIADO mantém a mira automática (IA do bot);
+    // em 2 jogadores reais o P2 aponta na direção do movimento (humano).
+    const _p2IsBot = (typeof MPModeSelect !== 'undefined') && MPModeSelect.botAllied;
+    if (_p2IsBot) {
+      // Mira automática: aponta para o inimigo mais próximo
+      let nearestEnemy = null, nearDist = Infinity;
+      Enemies.pool.forEach(e => {
+        const d = Util.dist(this, e);
+        if (d < nearDist) { nearDist = d; nearestEnemy = e; }
+      });
+      if (BossSystem.boss) {
+        const bd = Util.dist(this, BossSystem.boss);
+        if (bd < nearDist) nearestEnemy = BossSystem.boss;
+      }
+      if (nearestEnemy) {
+        this.angle = Math.atan2(nearestEnemy.y - this.y, nearestEnemy.x - this.x);
+      }
+    } else {
+      // 2 jogadores reais: P2 aponta para onde se move (teclas IJKL).
+      // Sem teclas pressionadas, mantém o último ângulo.
+      const _aim = P2Input.getDir();
+      if (Math.abs(_aim.dx) > 0.01 || Math.abs(_aim.dy) > 0.01) {
+        this.angle = Math.atan2(_aim.dy, _aim.dx);
+      }
     }
 
     // Tiro
