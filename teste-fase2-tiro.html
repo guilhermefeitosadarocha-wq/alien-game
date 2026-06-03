@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON SIEGE — Teste Online (Fase 2 + Tiro)</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #050a14;
+    color: #00c8ff;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 14px;
+  }
+  h1 {
+    font-size: 16px; letter-spacing: 0.15em;
+    color: #00c8ff; text-shadow: 0 0 12px rgba(0,200,255,0.7);
+    margin-bottom: 4px;
+  }
+  .sub { color: rgba(0,200,255,0.55); font-size: 11px; margin-bottom: 14px; text-align: center; }
+
+  .lobby {
+    background: rgba(0,15,30,0.85);
+    border: 1.5px solid rgba(0,200,255,0.4);
+    border-radius: 14px;
+    padding: 26px;
+    box-shadow: 0 0 30px rgba(0,200,255,0.15);
+    width: min(440px, 96%);
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .lobby h2 { font-size: 13px; letter-spacing: 0.12em; color: rgba(0,200,255,0.85); margin-bottom: 4px; }
+  .btn {
+    background: rgba(0,200,255,0.10);
+    border: 1.5px solid rgba(0,200,255,0.55);
+    border-radius: 8px;
+    color: #00c8ff;
+    font-family: 'Courier New', monospace;
+    font-size: 13px; font-weight: bold; letter-spacing: 0.10em;
+    padding: 12px 16px; cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  }
+  .btn:hover { background: rgba(0,200,255,0.20); box-shadow: 0 0 14px rgba(0,200,255,0.30); }
+  .btn:active { transform: scale(0.97); }
+  .btn.rosa { color: #ff44cc; border-color: rgba(255,80,200,0.55); background: rgba(255,80,200,0.08); }
+  .btn.rosa:hover { background: rgba(255,80,200,0.18); box-shadow: 0 0 14px rgba(255,80,200,0.30); }
+  .row { display: flex; gap: 8px; }
+  input[type=text] {
+    flex: 1;
+    background: rgba(0,0,0,0.5);
+    border: 1.5px solid rgba(0,200,255,0.35);
+    border-radius: 6px;
+    color: #00c8ff;
+    font-family: 'Courier New', monospace;
+    font-size: 14px; letter-spacing: 0.15em;
+    padding: 11px 12px; outline: none;
+    text-transform: uppercase;
+  }
+  input[type=text]:focus { border-color: rgba(0,200,255,0.7); }
+  .sep { height: 1px; background: rgba(0,200,255,0.18); margin: 6px 0; }
+  .erro {
+    color: #ff4466; font-size: 11px;
+    border-left: 3px solid rgba(255,60,90,0.5);
+    padding: 6px 10px; background: rgba(255,60,90,0.06);
+    border-radius: 4px;
+  }
+  .hide { display: none !important; }
+
+  .salaInfo {
+    background: rgba(0,15,30,0.85);
+    border: 1.5px solid rgba(0,200,255,0.35);
+    border-radius: 8px;
+    padding: 8px 14px;
+    display: flex; gap: 16px; align-items: center;
+    font-size: 12px; margin-bottom: 10px;
+  }
+  .salaInfo b { color: #00ff99; letter-spacing: 0.18em; font-size: 14px; }
+  .salaInfo .btnSair {
+    margin-left: auto;
+    background: rgba(255,60,90,0.10);
+    border: 1px solid rgba(255,60,90,0.5);
+    color: #ff4466; border-radius: 6px;
+    padding: 4px 10px; font-size: 11px; cursor: pointer;
+  }
+  .salaInfo .btnSair:hover { background: rgba(255,60,90,0.22); }
+  canvas {
+    background: #02060f;
+    border: 1.5px solid rgba(0,200,255,0.4);
+    border-radius: 10px;
+    box-shadow: 0 0 24px rgba(0,200,255,0.15);
+    display: block; max-width: 100%; height: auto;
+    cursor: crosshair;
+  }
+  .stats { margin-top: 8px; font-size: 10px; color: rgba(0,200,255,0.5); }
+  .info {
+    margin-top: 12px; padding: 10px 14px;
+    background: rgba(0,200,255,0.05);
+    border-left: 3px solid rgba(0,200,255,0.4);
+    border-radius: 4px;
+    font-size: 11px; color: rgba(0,200,255,0.7);
+    line-height: 1.6; max-width: 600px;
+  }
+  .info strong { color: #00c8ff; }
+</style>
+</head>
+<body>
+
+<h1>◈ FASE 2 + TIRO — EVENTOS SINCRONIZADOS ◈</h1>
+<p class="sub">salas por código · WASD pra mover · mouse pra mirar · clique ou ESPAÇO pra atirar</p>
+
+<!-- LOBBY -->
+<div id="lobby" class="lobby">
+  <h2>◆ CRIAR SALA NOVA</h2>
+  <button id="btnCriar" class="btn">CRIAR SALA</button>
+  <div class="sep"></div>
+  <h2>◆ ENTRAR EM SALA EXISTENTE</h2>
+  <div class="row">
+    <input id="inputCodigo" type="text" placeholder="DIGITE O CÓDIGO" maxlength="9">
+    <button id="btnEntrar" class="btn rosa">ENTRAR</button>
+  </div>
+  <div id="lobbyErro" class="erro hide"></div>
+</div>
+
+<!-- JOGO -->
+<div id="game" class="hide" style="display:flex; flex-direction:column; align-items:center;">
+  <div class="salaInfo">
+    <span>Sala: <b id="codigoSala">—</b></span>
+    <span id="naSala">1 jogador</span>
+    <button id="btnSair" class="btnSair">SAIR</button>
+  </div>
+
+  <canvas id="cv" width="600" height="400"></canvas>
+
+  <div class="stats" id="stats">aguardando…</div>
+
+  <div class="info">
+    <strong>Como atirar:</strong> mova o mouse pra mirar (sua nave vira). Clique no canvas
+    <em>ou</em> aperta ESPAÇO pra disparar. Os tiros são sincronizados como
+    <strong>eventos</strong>: cada disparo vira uma mensagem única, e cada navegador
+    simula a bala localmente até sair da tela. Esse é o jeito certo de sincronizar ações.
+    <br><br>
+    Por enquanto os tiros só viajam (não causam dano). O dano vem na Fase 3, com inimigos.
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+//  CONFIG
+// ─────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://xasgwdhartnrivgrzvri.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_L-_YjiayMOqtrX324DQy9w_JZbyZw-H';
+const ARENA_W = 600, ARENA_H = 400;
+const SPEED = 220;
+const SEND_HZ = 10;
+const INTERP_DELAY = 0.10;
+const BULLET_SPEED = 480;        // px/s
+const BULLET_TTL   = 1.6;        // segundos antes de sumir (sai da tela)
+const FIRE_COOLDOWN = 0.18;      // segundos entre tiros (antiflood)
+
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─────────────────────────────────────────────────────────────
+//  UTIL — código de sala
+// ─────────────────────────────────────────────────────────────
+function gerarCodigo() {
+  const alfa = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 4; i++) s += alfa[Math.floor(Math.random()*alfa.length)];
+  return 'NEON-' + s;
+}
+function normalizaCodigo(t) { return t.trim().toUpperCase().replace(/[^A-Z0-9-]/g,''); }
+
+// ─────────────────────────────────────────────────────────────
+//  LOBBY
+// ─────────────────────────────────────────────────────────────
+const lobbyEl = document.getElementById('lobby');
+const gameEl  = document.getElementById('game');
+const errEl   = document.getElementById('lobbyErro');
+const inputCod = document.getElementById('inputCodigo');
+
+function mostrarErro(msg) {
+  errEl.textContent = msg;
+  errEl.classList.remove('hide');
+  setTimeout(() => errEl.classList.add('hide'), 4000);
+}
+document.getElementById('btnCriar').addEventListener('click', () => iniciarSala(gerarCodigo()));
+document.getElementById('btnEntrar').addEventListener('click', () => {
+  let c = normalizaCodigo(inputCod.value);
+  if (c.length < 4) return mostrarErro('Digite um código válido (ex: NEON-A23K)');
+  if (!c.startsWith('NEON-')) c = 'NEON-' + c.replace(/^-+/, '');
+  iniciarSala(c);
+});
+inputCod.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btnEntrar').click(); });
+
+// ─────────────────────────────────────────────────────────────
+//  ESTADO DO JOGO
+// ─────────────────────────────────────────────────────────────
+const MEU_ID = 'P' + Math.random().toString(36).slice(2, 5).toUpperCase();
+const eu = { x: ARENA_W/2, y: ARENA_H/2, angle: 0, fireTimer: 0 };
+const outros = new Map(); // id → { buffer, x, y, angle }
+const balas = [];         // todas as balas (minhas e dos outros), simuladas localmente
+const keys = {};
+let mouseX = ARENA_W/2, mouseY = ARENA_H/2;
+let mouseDown = false;
+
+addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+addEventListener('keyup',   e => { keys[e.key.toLowerCase()] = false; });
+
+let canal = null, codigoAtual = null, conectado = false;
+let msgsEnviadas = 0, msgsRecebidas = 0;
+let loopRodando = false;
+
+// ─────────────────────────────────────────────────────────────
+//  ENTRAR NUMA SALA
+// ─────────────────────────────────────────────────────────────
+function iniciarSala(codigo) {
+  codigoAtual = codigo;
+  document.getElementById('codigoSala').textContent = codigo;
+  lobbyEl.classList.add('hide');
+  gameEl.classList.remove('hide');
+
+  canal = supa.channel('sala-' + codigo, { config: { broadcast: { self: false } } });
+
+  // Recebe posição contínua
+  canal.on('broadcast', { event: 'pos' }, ({ payload }) => {
+    msgsRecebidas++;
+    if (payload.id === MEU_ID) return;
+    let nave = outros.get(payload.id);
+    if (!nave) {
+      nave = { buffer: [], x: payload.x, y: payload.y, angle: payload.angle || 0 };
+      outros.set(payload.id, nave);
+      atualizarContagem();
+    }
+    nave.buffer.push({ t: performance.now()/1000, x: payload.x, y: payload.y, angle: payload.angle });
+    while (nave.buffer.length > 0 && performance.now()/1000 - nave.buffer[0].t > 1.0) nave.buffer.shift();
+  });
+
+  // Recebe EVENTO de tiro (disparo único, não contínuo)
+  canal.on('broadcast', { event: 'tiro' }, ({ payload }) => {
+    msgsRecebidas++;
+    if (payload.id === MEU_ID) return;
+    // Calcula quanto tempo essa bala já viajou desde que foi disparada
+    const idadeMs = Date.now() - payload.tNasc;
+    const idade = Math.max(0, idadeMs / 1000);
+    balas.push({
+      x: payload.x + Math.cos(payload.ang) * BULLET_SPEED * idade,
+      y: payload.y + Math.sin(payload.ang) * BULLET_SPEED * idade,
+      vx: Math.cos(payload.ang) * BULLET_SPEED,
+      vy: Math.sin(payload.ang) * BULLET_SPEED,
+      vida: BULLET_TTL - idade,
+      meu: false
+    });
+  });
+
+  // Aviso de saída
+  canal.on('broadcast', { event: 'sai' }, ({ payload }) => {
+    if (outros.has(payload.id)) { outros.delete(payload.id); atualizarContagem(); }
+  });
+  addEventListener('beforeunload', () => {
+    if (canal) canal.send({ type: 'broadcast', event: 'sai', payload: { id: MEU_ID } });
+  });
+
+  canal.subscribe(estado => {
+    if (estado === 'SUBSCRIBED') conectado = true;
+    else if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT') {
+      mostrarErro('Erro de conexão com a sala. Veja F12.');
+      sairDaSala();
+    }
+  });
+
+  if (!loopRodando) { loopRodando = true; requestAnimationFrame(loop); }
+}
+
+function sairDaSala() {
+  if (canal) {
+    canal.send({ type: 'broadcast', event: 'sai', payload: { id: MEU_ID } });
+    supa.removeChannel(canal);
+    canal = null;
+  }
+  conectado = false; codigoAtual = null;
+  outros.clear(); balas.length = 0;
+  gameEl.classList.add('hide');
+  lobbyEl.classList.remove('hide');
+  inputCod.value = '';
+}
+document.getElementById('btnSair').addEventListener('click', sairDaSala);
+
+function atualizarContagem() {
+  const total = 1 + outros.size;
+  document.getElementById('naSala').textContent = total + ' jogador' + (total === 1 ? '' : 'es');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  CANVAS — input do mouse
+// ─────────────────────────────────────────────────────────────
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+function atualizaMouse(e) {
+  const r = cv.getBoundingClientRect();
+  // Converte coordenadas do clique pra coords do canvas (cuidando do scale)
+  const sx = cv.width  / r.width;
+  const sy = cv.height / r.height;
+  mouseX = (e.clientX - r.left) * sx;
+  mouseY = (e.clientY - r.top)  * sy;
+}
+cv.addEventListener('mousemove', atualizaMouse);
+cv.addEventListener('mousedown', e => { atualizaMouse(e); mouseDown = true; });
+addEventListener('mouseup',   () => { mouseDown = false; });
+
+// ─────────────────────────────────────────────────────────────
+//  ATIRAR — gera um evento broadcast
+// ─────────────────────────────────────────────────────────────
+function atirar() {
+  if (eu.fireTimer > 0 || !conectado) return;
+  eu.fireTimer = FIRE_COOLDOWN;
+  const ang = eu.angle;
+  const tNasc = Date.now();
+  // Adiciona localmente (sem esperar a mensagem voltar)
+  balas.push({
+    x: eu.x, y: eu.y,
+    vx: Math.cos(ang) * BULLET_SPEED,
+    vy: Math.sin(ang) * BULLET_SPEED,
+    vida: BULLET_TTL,
+    meu: true
+  });
+  // Avisa os outros
+  canal.send({
+    type: 'broadcast',
+    event: 'tiro',
+    payload: { id: MEU_ID, x: eu.x, y: eu.y, ang: ang, tNasc: tNasc }
+  });
+  msgsEnviadas++;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DESENHO
+// ─────────────────────────────────────────────────────────────
+function desenharGrid() {
+  ctx.strokeStyle = 'rgba(0,200,255,0.08)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= ARENA_W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ARENA_H); ctx.stroke(); }
+  for (let y = 0; y <= ARENA_H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ARENA_W, y); ctx.stroke(); }
+}
+
+function desenharNave(x, y, ang, cor, glow, label, ehEu) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(ang + Math.PI/2); // visual aponta pra frente (cabeça pra cima quando ang=-PI/2)
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = cor;
+  ctx.beginPath();
+  ctx.moveTo(0, -12); ctx.lineTo(10, 10); ctx.lineTo(-10, 10);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = ehEu ? 'rgba(0,200,255,0.85)' : 'rgba(255,80,200,0.85)';
+  ctx.font = "bold 10px 'Courier New', monospace";
+  ctx.textAlign = 'center';
+  ctx.fillText(label + (ehEu ? ' (você)' : ''), x, y - 22);
+}
+
+function desenharBala(b) {
+  ctx.save();
+  ctx.shadowColor = b.meu ? 'rgba(0,200,255,0.9)' : 'rgba(255,80,200,0.9)';
+  ctx.shadowBlur = 12;
+  ctx.fillStyle  = b.meu ? '#9ee8ff' : '#ffaadd';
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, 3, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  LOOP
+// ─────────────────────────────────────────────────────────────
+let ultimoTempo = performance.now();
+let proximoEnvio = 0;
+
+function loop(agora) {
+  if (!canal) return;
+  const dt = Math.min((agora - ultimoTempo) / 1000, 0.05);
+  ultimoTempo = agora;
+
+  // 1) Movimento (WASD)
+  let dx = 0, dy = 0;
+  if (keys['w'] || keys['arrowup'])    dy -= 1;
+  if (keys['s'] || keys['arrowdown'])  dy += 1;
+  if (keys['a'] || keys['arrowleft'])  dx -= 1;
+  if (keys['d'] || keys['arrowright']) dx += 1;
+  if (dx || dy) {
+    const len = Math.hypot(dx, dy);
+    dx /= len; dy /= len;
+    eu.x += dx * SPEED * dt; eu.y += dy * SPEED * dt;
+    eu.x = Math.max(15, Math.min(ARENA_W - 15, eu.x));
+    eu.y = Math.max(15, Math.min(ARENA_H - 15, eu.y));
+  }
+
+  // 2) Mira: aponta pro mouse
+  eu.angle = Math.atan2(mouseY - eu.y, mouseX - eu.x);
+
+  // 3) Tiro: clique do mouse OU espaço
+  if (eu.fireTimer > 0) eu.fireTimer -= dt;
+  if (mouseDown || keys[' ']) atirar();
+
+  // 4) Envia posição ~SEND_HZ vezes por segundo
+  if (conectado && agora >= proximoEnvio) {
+    canal.send({
+      type: 'broadcast', event: 'pos',
+      payload: { id: MEU_ID, x: eu.x, y: eu.y, angle: eu.angle }
+    });
+    msgsEnviadas++;
+    proximoEnvio = agora + (1000 / SEND_HZ);
+  }
+
+  // 5) Atualiza balas (todas, localmente — simulação determinística)
+  for (let i = balas.length - 1; i >= 0; i--) {
+    const b = balas[i];
+    b.x += b.vx * dt; b.y += b.vy * dt;
+    b.vida -= dt;
+    if (b.vida <= 0 || b.x < -10 || b.x > ARENA_W+10 || b.y < -10 || b.y > ARENA_H+10) {
+      balas.splice(i, 1);
+    }
+  }
+
+  // 6) Desenho
+  ctx.clearRect(0, 0, ARENA_W, ARENA_H);
+  desenharGrid();
+
+  // outras naves (interpoladas)
+  const tRender = performance.now()/1000 - INTERP_DELAY;
+  for (const [id, nave] of outros) {
+    let a = null, b = null;
+    for (let i = 0; i < nave.buffer.length - 1; i++) {
+      if (nave.buffer[i].t <= tRender && nave.buffer[i+1].t >= tRender) {
+        a = nave.buffer[i]; b = nave.buffer[i+1]; break;
+      }
+    }
+    let x = nave.x, y = nave.y, ang = nave.angle;
+    if (a && b) {
+      const k = (tRender - a.t) / Math.max(b.t - a.t, 0.001);
+      x = a.x + (b.x - a.x) * k;
+      y = a.y + (b.y - a.y) * k;
+      // ângulo: interpolação simples (cuidando do "wrap" -π/+π)
+      let da = b.angle - a.angle;
+      if (da >  Math.PI) da -= 2*Math.PI;
+      if (da < -Math.PI) da += 2*Math.PI;
+      ang = a.angle + da * k;
+    } else if (nave.buffer.length > 0) {
+      const u = nave.buffer[nave.buffer.length - 1];
+      x = u.x; y = u.y; ang = u.angle;
+    }
+    nave.x = x; nave.y = y; nave.angle = ang;
+    desenharNave(x, y, ang, '#ff44cc', 'rgba(255,80,200,0.85)', id, false);
+  }
+
+  // balas
+  for (const b of balas) desenharBala(b);
+
+  // minha nave por cima
+  desenharNave(eu.x, eu.y, eu.angle, '#00c8ff', 'rgba(0,200,255,0.85)', MEU_ID, true);
+
+  document.getElementById('stats').textContent =
+    `meu id: ${MEU_ID}  ·  sala: ${codigoAtual}  ·  balas: ${balas.length}  ·  ` +
+    `enviadas: ${msgsEnviadas}  ·  recebidas: ${msgsRecebidas}`;
+
+  requestAnimationFrame(loop);
+}
+</script>
+
+</body>
+</html>
