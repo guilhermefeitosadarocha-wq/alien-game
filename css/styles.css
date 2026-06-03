@@ -1,0 +1,2002 @@
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* ── MOBILE EXPERIENCE — base ──────────────────────────── */
+  html {
+    height: 100%;
+    overflow: hidden;
+    /* Respeita safe-area em dispositivos com notch/barra de gestos */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  body {
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* dvh = Dynamic Viewport Height — mais preciso no mobile */
+    height: 100dvh;
+    width: 100dvw;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    /* Evita highlight ao tocar em mobile */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #gameCanvas {
+    display: block;
+    cursor: crosshair;
+    image-rendering: pixelated;
+    /* Garante que o canvas não seja arrastado/selecionado no mobile */
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* ── MOBILE CONTROLS ─────────────────────────────────── */
+  #mobileControls {
+    position: fixed;
+    /* Respeita barra de gestos inferior */
+    bottom: env(safe-area-inset-bottom, 0px);
+    left: 0; right: 0;
+    /* Altura adaptativa: maior no mobile, menor no PC */
+    height: clamp(160px, 28vmin, 220px);
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  #joystickZone {
+    position: absolute;
+    /* Posição adaptativa usando env safe-area e clamp */
+    bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    left: max(16px, env(safe-area-inset-left, 16px));
+    width: clamp(130px, 36vmin, 170px);
+    height: clamp(130px, 36vmin, 170px);
+    pointer-events: all;
+    /* Zona de toque generosa para evitar misses */
+    touch-action: none;
+  }
+
+  #joystickBase {
+    position: absolute;
+    /* Ocupa ~86% da zona */
+    width: 86%; height: 86%;
+    border-radius: 50%;
+    border: 2px solid rgba(0,200,255,0.35);
+    background: rgba(0,200,255,0.06);
+    top: 7%; left: 7%;
+    /* Glow sutil — feedback visual sem poluir */
+    box-shadow: 0 0 16px rgba(0,200,255,0.08), inset 0 0 20px rgba(0,200,255,0.04);
+  }
+
+  #joystickKnob {
+    position: absolute;
+    /* Knob maior = mais confortável */
+    width: clamp(44px, 12vmin, 56px);
+    height: clamp(44px, 12vmin, 56px);
+    border-radius: 50%;
+    background: rgba(0,200,255,0.28);
+    border: 2px solid rgba(0,200,255,0.65);
+    box-shadow: 0 0 14px rgba(0,200,255,0.45), 0 0 28px rgba(0,200,255,0.15);
+    /* Posicionado no centro — JS sobrescreve dinamicamente */
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    transition: box-shadow 0.1s;
+    touch-action: none;
+  }
+
+  #shootBtn {
+    position: absolute;
+    /* Posição com safe-area */
+    bottom: max(18px, env(safe-area-inset-bottom, 18px));
+    right: max(20px, env(safe-area-inset-right, 20px));
+    /* Botão maior e mais confortável */
+    width: clamp(76px, 20vmin, 96px);
+    height: clamp(76px, 20vmin, 96px);
+    border-radius: 50%;
+    border: 2px solid rgba(0,200,255,0.55);
+    background: rgba(0,200,255,0.09);
+    color: rgba(0,200,255,0.85);
+    font-size: clamp(24px, 7vmin, 32px);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: all;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(0,200,255,0.22);
+    transition: background 0.08s, box-shadow 0.08s, transform 0.06s;
+    touch-action: none;
+    /* Previne double-tap zoom */
+    -webkit-tap-highlight-color: transparent;
+  }
+  #shootBtn:active {
+    background: rgba(0,200,255,0.28);
+    box-shadow: 0 0 32px rgba(0,200,255,0.55);
+    transform: scale(0.94);
+  }
+
+  /* ── MOBILE HUD COMPACTO ─────────────────────────────────
+     Aplica-se apenas em telas mobile (portrait e landscape)   */
+  @media (max-width: 768px), (max-height: 500px) {
+
+    /* Coin panel menor e sem converter btn */
+    #coinPanel {
+      top: max(8px, env(safe-area-inset-top, 8px));
+      right: max(8px, env(safe-area-inset-right, 8px));
+      gap: 4px;
+    }
+    #coinCounter {
+      padding: 4px 10px 4px 8px;
+      border-radius: 6px;
+    }
+    #coinIcon  { font-size: 14px; }
+    #coinValue { font-size: 12px; min-width: 26px; }
+
+    /* Oculta o feedback inline converter no mobile (pouco espaço) */
+    #convertFeedback { display: none; }
+
+    /* Pause btn mais compacto */
+    #pauseBtn { width: 32px; height: 32px; font-size: 13px; top: max(8px, env(safe-area-inset-top,8px)); right: 148px; }
+
+    /* Shop btn menor */
+    #shopOpenBtn { font-size: 11px; padding: 6px 12px; top: max(8px, env(safe-area-inset-top,8px)); left: max(8px, env(safe-area-inset-left,8px)); }
+
+    /* Settings btn abaixo do mpToggleBtn, ambos acima dos controles móveis */
+    #settingsBtn { bottom: 16px; font-size: 10px; padding: 6px 14px; }
+
+    /* MP toggle btn acima do settingsBtn, abaixo do botão PLAY */
+    #mpToggleBtn { bottom: 56px; font-size: 10px; padding: 6px 14px; }
+
+    /* Diff badge menor */
+    #diffBadge { font-size: 9px; top: max(48px, calc(env(safe-area-inset-top,0px) + 46px)); right: max(8px, env(safe-area-inset-right,8px)); }
+
+    /* Boss bar sobe para não colidir com controles */
+    #bossBar { bottom: max(230px, calc(28vmin + env(safe-area-inset-bottom,0px) + 16px)); }
+
+    /* Combo display menor */
+    #comboNumber { font-size: 28px; }
+    #comboLabel  { font-size: 9px; }
+    #comboBar    { width: 80px; }
+
+    /* Energy bar reposicionada */
+    #energyBar { bottom: max(230px, calc(28vmin + env(safe-area-inset-bottom,0px) + 16px)); right: max(8px, env(safe-area-inset-right,8px)); height: 110px; width: 10px; }
+
+    /* Anchor HUD menor */
+    #anchorHUD { bottom: max(230px, calc(28vmin + env(safe-area-inset-bottom,0px) + 16px)); min-width: 180px; gap: 4px; }
+    #anchorBadge { font-size: 11px; }
+    #anchorDurTrack { width: 160px; height: 6px; }
+    #pulseTrack { width: 160px; height: 4px; }
+    #pulseLabel { font-size: 9px; }
+
+    /* Pulse btn mobile reposicionado */
+    #anchorPulseBtn { width: 54px; height: 54px; font-size: 18px; bottom: max(120px, calc(28vmin - 44px)); right: max(124px, calc(20vmin + 28px)); }
+
+    /* Reward cards menores */
+    .reward-card { width: 140px; padding: 14px 10px; }
+    .reward-card-icon { font-size: 26px; }
+    .reward-card-name { font-size: 11px; }
+    .reward-card-desc { font-size: 9px; }
+  }
+
+  /* ── LANDSCAPE MOBILE ────────────────────────────────────── */
+  @media (max-height: 500px) and (orientation: landscape) {
+    #mobileControls { height: clamp(120px, 22vmin, 160px); }
+    #joystickZone   { width: clamp(110px, 28vmin, 140px); height: clamp(110px, 28vmin, 140px); }
+    #shootBtn       { width: clamp(64px, 16vmin, 80px); height: clamp(64px, 16vmin, 80px); font-size: clamp(20px, 5vmin, 26px); }
+  }
+
+  /* ── COIN PANEL ── */
+  #coinPanel {
+    position: fixed;
+    top: 16px; right: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    z-index: 200;
+    pointer-events: none;
+  }
+  #coinCounter {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(0,10,20,0.75);
+    border: 1px solid rgba(0,200,255,0.25);
+    border-radius: 8px;
+    padding: 6px 14px 6px 10px;
+    backdrop-filter: blur(6px);
+  }
+  #coinIcon {
+    font-size: 18px;
+    line-height: 1;
+    filter: drop-shadow(0 0 6px rgba(255,200,0,0.8));
+    transition: transform 0.25s cubic-bezier(.34,1.56,.64,1);
+  }
+  #coinIcon.pop {
+    transform: scale(1.5) rotate(-12deg);
+  }
+  #coinValue {
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255,200,0,0.7);
+    min-width: 36px;
+    text-align: right;
+    transition: color 0.2s;
+  }
+  #coinValue.flash-success { color: #00ffcc; text-shadow: 0 0 14px #00ffcc; }
+  #coinValue.flash-error   { color: #ff4466; text-shadow: 0 0 14px #ff4466; }
+
+  #convertBtn {
+    pointer-events: all;
+    background: rgba(0,200,255,0.08);
+    border: 1.5px solid rgba(0,200,255,0.55);
+    border-radius: 8px;
+    color: #00c8ff;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.04em;
+    padding: 7px 14px;
+    cursor: pointer;
+    text-shadow: 0 0 8px rgba(0,200,255,0.6);
+    box-shadow: 0 0 10px rgba(0,200,255,0.12);
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  #convertBtn:hover {
+    background: rgba(0,200,255,0.18);
+    box-shadow: 0 0 18px rgba(0,200,255,0.35);
+  }
+  #convertBtn:active { transform: scale(0.96); }
+  #convertBtn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  #convertFeedback {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    min-height: 16px;
+    text-align: right;
+    transition: opacity 0.4s;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #convertFeedback.visible   { opacity: 1; }
+  #convertFeedback.success   { color: #00ffcc; text-shadow: 0 0 8px #00ffcc; }
+  #convertFeedback.error     { color: #ff4466; text-shadow: 0 0 8px #ff4466; }
+
+  /* floating +N coins particle */
+  .coin-float {
+    position: fixed;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255,200,0,0.9);
+    pointer-events: none;
+    z-index: 300;
+    animation: coinFloat 0.9s ease-out forwards;
+  }
+  @keyframes coinFloat {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-42px) scale(0.8); }
+  }
+
+  /* ═══════════════════════════════════════════════
+     SHOP SYSTEM — estilos
+  ═══════════════════════════════════════════════ */
+
+  /* Botão de abertura da loja */
+  #shopOpenBtn {
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 200;
+    background: rgba(0,10,20,0.80);
+    border: 1.5px solid rgba(255,0,200,0.60);
+    border-radius: 8px;
+    color: #ff00cc;
+    text-shadow: 0 0 8px rgba(255,0,200,0.6);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.06em;
+    padding: 8px 16px;
+    cursor: pointer;
+    text-shadow: 0 0 8px rgba(0,200,255,0.7);
+    box-shadow: 0 0 12px rgba(0,200,255,0.15);
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+    backdrop-filter: blur(6px);
+  }
+  #shopOpenBtn:hover {
+    background: rgba(0,200,255,0.15);
+    box-shadow: 0 0 22px rgba(0,200,255,0.40);
+  }
+  #shopOpenBtn:active { transform: scale(0.96); }
+
+  /* Overlay escuro */
+  #shopOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.78);
+    z-index: 500;
+    backdrop-filter: blur(3px);
+    animation: shopFadeIn 0.22s ease;
+  }
+  #shopOverlay.visible { display: flex; align-items: center; justify-content: center; }
+  @keyframes shopFadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* Painel principal */
+  #shopPanel {
+    position: relative;
+    width: min(760px, 96vw);
+    max-height: 88vh;
+    background: rgba(2,12,24,0.97);
+    border: 1.5px solid rgba(0,200,255,0.35);
+    border-radius: 14px;
+    box-shadow: 0 0 48px rgba(0,200,255,0.18), inset 0 0 60px rgba(0,150,200,0.04);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: shopSlideIn 0.25s cubic-bezier(.22,.68,0,1.2);
+  }
+  @keyframes shopSlideIn {
+    from { transform: translateY(28px) scale(0.97); opacity: 0; }
+    to   { transform: translateY(0)    scale(1);    opacity: 1; }
+  }
+
+  /* Cabeçalho */
+  #shopHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid rgba(0,200,255,0.15);
+    flex-shrink: 0;
+  }
+  #shopTitle {
+    font-family: 'Courier New', monospace;
+    font-size: 22px;
+    font-weight: bold;
+    color: #ff00cc;
+    text-shadow: 0 0 18px rgba(255,0,200,0.75);
+    letter-spacing: 0.12em;
+  }
+  #shopCoinDisplay {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(0,10,20,0.7);
+    border: 1px solid rgba(255,200,0,0.30);
+    border-radius: 8px;
+    padding: 6px 14px 6px 10px;
+  }
+  #shopCoinDisplay span:first-child { font-size: 18px; }
+  #shopCoinAmt {
+    font-family: 'Courier New', monospace;
+    font-size: 17px;
+    font-weight: bold;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255,200,0,0.6);
+    min-width: 34px;
+    text-align: right;
+    transition: color 0.25s;
+  }
+  #shopCoinAmt.flash { color: #00ffcc; text-shadow: 0 0 14px #00ffcc; }
+  #shopCloseBtn {
+    background: none;
+    border: 1px solid rgba(0,200,255,0.30);
+    border-radius: 6px;
+    color: rgba(0,200,255,0.7);
+    font-size: 20px;
+    width: 36px; height: 36px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1;
+  }
+  #shopCloseBtn:hover { background: rgba(0,200,255,0.12); color: #00c8ff; }
+
+  /* Abas de categoria */
+  #shopTabs {
+    display: flex;
+    gap: 4px;
+    padding: 12px 22px 0;
+    border-bottom: 1px solid rgba(0,200,255,0.12);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .shop-tab {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    padding: 7px 14px;
+    border: 1px solid rgba(0,200,255,0.25);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: rgba(0,200,255,0.04);
+    color: rgba(0,200,255,0.55);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .shop-tab:hover { background: rgba(0,200,255,0.10); color: rgba(0,200,255,0.85); }
+  .shop-tab.active {
+    background: rgba(0,200,255,0.14);
+    color: #00c8ff;
+    text-shadow: 0 0 8px rgba(0,200,255,0.5);
+    border-color: rgba(0,200,255,0.45);
+  }
+
+  /* Grid de itens */
+  #shopItemsWrapper {
+    overflow-y: auto;
+    flex: 1;
+    padding: 18px 22px 22px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,200,255,0.3) transparent;
+  }
+  #shopItemsWrapper::-webkit-scrollbar { width: 5px; }
+  #shopItemsWrapper::-webkit-scrollbar-thumb { background: rgba(0,200,255,0.3); border-radius: 3px; }
+  #shopGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  /* Card de item */
+  .shop-card {
+    background: rgba(0,18,36,0.85);
+    border: 1px solid rgba(0,200,255,0.20);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .shop-card:hover {
+    border-color: rgba(0,200,255,0.50);
+    box-shadow: 0 0 18px rgba(0,200,255,0.12);
+  }
+  .shop-card.maxed { border-color: rgba(255,200,0,0.35); }
+  .shop-card.maxed:hover { border-color: rgba(255,200,0,0.55); box-shadow: 0 0 16px rgba(255,200,0,0.10); }
+  .shop-card.cant-afford { opacity: 0.55; }
+
+  .shop-card-icon  { font-size: 26px; line-height: 1; }
+  .shop-card-name  {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    color: #00eeff;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 8px rgba(0,238,255,0.6);
+  }
+  .shop-card-desc  {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: rgba(0,200,255,0.50);
+    line-height: 1.4;
+    flex: 1;
+  }
+
+  /* Barra de nível */
+  .shop-level-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .shop-level-label {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: rgba(0,200,255,0.45);
+    white-space: nowrap;
+  }
+  .shop-pips {
+    display: flex;
+    gap: 3px;
+  }
+  .shop-pip {
+    width: 10px; height: 6px;
+    border-radius: 2px;
+    background: rgba(0,200,255,0.12);
+    border: 1px solid rgba(0,200,255,0.25);
+    transition: background 0.25s;
+  }
+  .shop-pip.filled { background: rgba(0,200,255,0.65); border-color: rgba(0,200,255,0.8); }
+  .shop-pip.maxed  { background: rgba(255,200,0,0.70); border-color: rgba(255,200,0,0.9); }
+
+  /* Botão de compra */
+  .shop-buy-btn {
+    margin-top: 4px;
+    width: 100%;
+    padding: 8px 0;
+    border-radius: 6px;
+    border: 1px solid rgba(0,255,136,0.55);
+    background: rgba(0,255,136,0.08);
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+    text-shadow: 0 0 6px rgba(0,200,255,0.5);
+  }
+  .shop-buy-btn:hover:not(:disabled) {
+    background: rgba(0,200,255,0.20);
+    box-shadow: 0 0 14px rgba(0,200,255,0.30);
+  }
+  .shop-buy-btn:active:not(:disabled) { transform: scale(0.96); }
+  .shop-buy-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+    border-color: rgba(0,200,255,0.18);
+  }
+  .shop-buy-btn.maxed-btn {
+    border-color: rgba(255,200,0,0.40);
+    color: #ffd700;
+    text-shadow: 0 0 6px rgba(255,200,0,0.5);
+    background: rgba(255,200,0,0.06);
+    cursor: default;
+  }
+
+  /* Feedback flash no card */
+  .shop-card-flash {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.05s;
+  }
+  .shop-card-flash.success { background: rgba(0,200,255,0.18); opacity: 1; }
+  .shop-card-flash.error   { background: rgba(255,40,80,0.18);  opacity: 1; }
+
+  /* Toast de feedback */
+  #shopToast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(0,12,24,0.93);
+    border: 1px solid rgba(0,200,255,0.40);
+    border-radius: 8px;
+    padding: 9px 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    color: #00c8ff;
+    text-shadow: 0 0 8px rgba(0,200,255,0.6);
+    z-index: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    white-space: nowrap;
+  }
+  #shopToast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #shopToast.error { border-color: rgba(255,40,80,0.50); color: #ff4466; text-shadow: 0 0 8px rgba(255,40,80,0.6); }
+
+  /* ═══════════════════════════════════════════════════════════
+     PAUSE SYSTEM — estilos
+  ══════════════════════════════════════════════════════════ */
+
+  /* ── Botão de pause (canto superior direito) ── */
+  #pauseBtn {
+    position: fixed;
+    top: 16px;
+    /* fica à esquerda do coinPanel que tem right:16px + ~120px de largura */
+    right: 150px;
+    z-index: 201;
+    width: 38px; height: 38px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(255,220,0,0.55);
+    background: rgba(0,10,20,0.82);
+    color: rgba(255,220,0,0.90);
+    font-size: 15px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 0 10px rgba(0,200,255,0.12);
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s, opacity 0.2s;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #pauseBtn.game-active {
+    opacity: 1;
+    pointer-events: all;
+  }
+  #pauseBtn:hover {
+    background: rgba(0,200,255,0.14);
+    box-shadow: 0 0 20px rgba(0,200,255,0.35);
+  }
+  #pauseBtn:active { transform: scale(0.93); }
+
+  /* ── Overlay de pause ── */
+  #pauseOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    background: rgba(0,0,0,0);
+  }
+  #pauseOverlay.visible {
+    opacity: 1;
+    pointer-events: all;
+    background: rgba(0,0,0,0.62);
+    backdrop-filter: blur(2px);
+  }
+
+  /* ── Painel central de pause ── */
+  #pausePanel {
+    position: relative;
+    width: min(340px, 90vw);
+    background: rgba(2,12,24,0.97);
+    border: 1.5px solid rgba(0,200,255,0.38);
+    border-radius: 16px;
+    box-shadow: 0 0 60px rgba(0,200,255,0.16), inset 0 0 40px rgba(0,150,200,0.04);
+    padding: 36px 30px 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    transform: translateY(24px) scale(0.96);
+    transition: transform 0.28s cubic-bezier(.22,.68,0,1.2);
+  }
+  #pauseOverlay.visible #pausePanel {
+    transform: translateY(0) scale(1);
+  }
+
+  /* Linha decorativa superior */
+  #pausePanel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 15%; right: 15%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0,200,255,0.7), transparent);
+    border-radius: 2px;
+  }
+
+  /* Título PAUSED */
+  #pauseTitle {
+    font-family: 'Courier New', monospace;
+    font-size: 32px;
+    font-weight: bold;
+    letter-spacing: 0.18em;
+    color: #ff00cc;
+    text-shadow: 0 0 22px rgba(255,0,200,0.85), 0 0 6px rgba(255,0,200,0.5);
+    margin-bottom: 6px;
+    animation: pauseGlowPulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pauseGlowPulse {
+    0%, 100% { text-shadow: 0 0 22px rgba(255,0,200,0.85), 0 0 6px rgba(255,0,200,0.5); }
+    50%       { text-shadow: 0 0 40px rgba(255,0,200,1),    0 0 14px rgba(255,0,200,0.7); }
+  }
+
+  /* Separador */
+  .pause-divider {
+    width: 80%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,200,255,0.25), transparent);
+    margin: 2px 0;
+  }
+
+  /* Info de score/tempo no pause */
+  #pauseInfo {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 4px;
+  }
+  .pause-info-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .pause-info-val {
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: bold;
+    color: #00c8ff;
+    text-shadow: 0 0 8px rgba(0,200,255,0.5);
+  }
+  .pause-info-lbl {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: rgba(0,200,255,0.45);
+    letter-spacing: 0.1em;
+  }
+
+  /* Botões do menu pause */
+  .pause-menu-btn {
+    width: 100%;
+    padding: 13px 0;
+    border-radius: 9px;
+    border: 1.5px solid rgba(0,200,255,0.40);
+    background: rgba(0,200,255,0.07);
+    color: #00c8ff;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 0.10em;
+    cursor: pointer;
+    text-shadow: 0 0 7px rgba(0,200,255,0.5);
+    box-shadow: 0 0 10px rgba(0,200,255,0.08);
+    transition: background 0.15s, box-shadow 0.18s, transform 0.1s, border-color 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+  }
+  .pause-menu-btn:hover {
+    background: rgba(0,200,255,0.16);
+    box-shadow: 0 0 22px rgba(0,200,255,0.28);
+    border-color: rgba(0,200,255,0.65);
+  }
+  .pause-menu-btn:active { transform: scale(0.97); }
+
+  /* Variantes de botão */
+  .pause-menu-btn.btn-continue {
+    border-color: rgba(0,255,136,0.65);
+    color: #00ff88;
+    text-shadow: 0 0 10px rgba(0,255,136,0.7);
+    background: rgba(0,255,160,0.07);
+  }
+  .pause-menu-btn.btn-continue:hover {
+    background: rgba(0,255,160,0.16);
+    box-shadow: 0 0 22px rgba(0,255,160,0.25);
+    border-color: rgba(0,255,160,0.65);
+  }
+  .pause-menu-btn.btn-exit {
+    border-color: rgba(255,80,80,0.35);
+    color: rgba(255,120,120,0.9);
+    text-shadow: 0 0 7px rgba(255,80,80,0.4);
+    background: rgba(255,60,60,0.05);
+  }
+  .pause-menu-btn.btn-exit:hover {
+    background: rgba(255,60,60,0.13);
+    box-shadow: 0 0 22px rgba(255,60,60,0.20);
+    border-color: rgba(255,80,80,0.55);
+  }
+
+  /* Dica de teclado */
+  #pauseHint {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: rgba(0,200,255,0.30);
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+
+  /* ══════════════════════════════════════════
+     IMPROVEMENTS PACK — estilos
+  ══════════════════════════════════════════ */
+
+  /* Boss health bar */
+  #bossBar {
+    position: fixed;
+    bottom: 210px; left: 50%; transform: translateX(-50%);
+    width: min(420px, 85vw);
+    z-index: 300;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    pointer-events: none;
+  }
+  #bossBar.visible { display: flex; }
+  #bossBarLabel {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    color: #ff4488;
+    text-shadow: 0 0 10px rgba(255,40,120,0.8);
+  }
+  #bossBarTrack {
+    width: 100%;
+    height: 10px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,40,120,0.4);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  #bossBarFill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff0066, #ff44aa);
+    box-shadow: 0 0 12px rgba(255,0,100,0.7);
+    border-radius: 6px;
+    transition: width 0.1s;
+  }
+
+  /* Combo HUD */
+  #comboDisplay {
+    position: fixed;
+    top: 70px; left: 50%; transform: translateX(-50%);
+    z-index: 300;
+    pointer-events: none;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  #comboDisplay.visible { opacity: 1; }
+  #comboNumber {
+    font-family: 'Courier New', monospace;
+    font-size: 36px;
+    font-weight: bold;
+    color: #ffdd00;
+    text-shadow: 0 0 20px rgba(255,200,0,0.9), 0 0 40px rgba(255,150,0,0.5);
+    line-height: 1;
+    animation: comboPulse 0.18s ease-out;
+  }
+  @keyframes comboPulse {
+    0%   { transform: scale(1.4); }
+    100% { transform: scale(1); }
+  }
+  #comboLabel {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: rgba(255,200,0,0.6);
+  }
+  #comboBar {
+    width: 100px;
+    height: 3px;
+    background: rgba(255,200,0,0.2);
+    border-radius: 2px;
+    margin: 4px auto 0;
+    overflow: hidden;
+  }
+  #comboBarFill {
+    height: 100%;
+    background: #ffdd00;
+    box-shadow: 0 0 8px rgba(255,200,0,0.8);
+    border-radius: 2px;
+    transition: width 0.05s linear;
+  }
+
+  /* Screen flash overlay */
+  #screenFlash {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 900;
+    opacity: 0;
+    transition: opacity 0.05s;
+  }
+
+  /* Difficulty badge */
+  #diffBadge {
+    position: fixed;
+    top: 58px; right: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    color: rgba(0,200,255,0.5);
+    text-shadow: 0 0 6px rgba(0,200,255,0.3);
+    z-index: 200;
+    pointer-events: none;
+    transition: color 0.5s, text-shadow 0.5s;
+  }
+  #diffBadge.high {
+    color: rgba(255,100,50,0.8);
+    text-shadow: 0 0 8px rgba(255,80,0,0.6);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     SETTINGS SYSTEM — estilos
+  ══════════════════════════════════════════════════════════ */
+
+  /* Botão CONTROLS (no menu principal — canvas, posicionado via JS) */
+  /* O botão do pause é criado inline no HTML */
+  #settingsBtn {
+    position: fixed;
+    bottom: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 201;
+    background: rgba(0,10,20,0.82);
+    border: 1.5px solid rgba(0,200,255,0.40);
+    border-radius: 8px;
+    color: rgba(0,200,255,0.75);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    padding: 8px 20px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 0 10px rgba(0,200,255,0.10);
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s, opacity 0.2s;
+    opacity: 0; pointer-events: none;
+  }
+  #settingsBtn.visible { opacity: 1; pointer-events: all; }
+  #settingsBtn:hover {
+    background: rgba(0,200,255,0.14);
+    box-shadow: 0 0 18px rgba(0,200,255,0.30);
+  }
+  #settingsBtn:active { transform: translateX(-50%) scale(0.96); }
+
+  /* Overlay */
+  #settingsOverlay {
+    position: fixed; inset: 0; z-index: 850;
+    background: rgba(0,0,0,0.80);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center; justify-content: center;
+  }
+  #settingsOverlay.visible { display: flex; }
+
+  /* Painel */
+  #settingsPanel {
+    position: relative;
+    width: min(580px, 96vw);
+    max-height: 90vh;
+    background: rgba(2,10,22,0.98);
+    border: 1.5px solid rgba(0,200,255,0.32);
+    border-radius: 16px;
+    box-shadow: 0 0 60px rgba(0,200,255,0.14), inset 0 0 60px rgba(0,150,200,0.03);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    animation: settingsSlideIn 0.24s cubic-bezier(.22,.68,0,1.2);
+  }
+  @keyframes settingsSlideIn {
+    from { transform: translateY(28px) scale(0.97); opacity: 0; }
+    to   { transform: translateY(0)    scale(1);    opacity: 1; }
+  }
+  #settingsPanel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 12%; right: 12%; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0,200,255,0.65), transparent);
+  }
+
+  /* Header */
+  #settingsHeader {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid rgba(0,200,255,0.12);
+    flex-shrink: 0;
+  }
+  #settingsTitle {
+    font-family: 'Courier New', monospace;
+    font-size: 20px; font-weight: bold;
+    letter-spacing: 0.14em;
+    color: #00c8ff;
+    text-shadow: 0 0 14px rgba(0,200,255,0.65);
+  }
+  #settingsCloseBtn {
+    background: none; border: 1px solid rgba(0,200,255,0.28);
+    border-radius: 6px; color: rgba(0,200,255,0.7);
+    font-size: 18px; width: 34px; height: 34px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s;
+  }
+  #settingsCloseBtn:hover { background: rgba(0,200,255,0.12); color: #00c8ff; }
+
+  /* Tabs */
+  #settingsTabs {
+    display: flex; gap: 3px; padding: 10px 18px 0;
+    border-bottom: 1px solid rgba(0,200,255,0.10);
+    flex-shrink: 0; flex-wrap: wrap;
+  }
+  .settings-tab {
+    font-family: 'Courier New', monospace;
+    font-size: 10px; font-weight: bold; letter-spacing: 0.08em;
+    padding: 6px 12px;
+    border: 1px solid rgba(0,200,255,0.22); border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: rgba(0,200,255,0.03);
+    color: rgba(0,200,255,0.45); cursor: pointer;
+    transition: background 0.14s, color 0.14s;
+  }
+  .settings-tab:hover { background: rgba(0,200,255,0.08); color: rgba(0,200,255,0.8); }
+  .settings-tab.active {
+    background: rgba(0,200,255,0.12); color: #00c8ff;
+    border-color: rgba(0,200,255,0.40);
+    text-shadow: 0 0 7px rgba(0,200,255,0.45);
+  }
+
+  /* Scroll body */
+  #settingsBody {
+    overflow-y: auto; flex: 1; padding: 18px 22px 22px;
+    scrollbar-width: thin; scrollbar-color: rgba(0,200,255,0.28) transparent;
+  }
+  #settingsBody::-webkit-scrollbar { width: 4px; }
+  #settingsBody::-webkit-scrollbar-thumb { background: rgba(0,200,255,0.28); border-radius: 3px; }
+
+  /* Section */
+  .settings-section { display: none; }
+  .settings-section.active { display: block; }
+
+  /* Row */
+  .settings-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0,200,255,0.07);
+    gap: 12px;
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row-label {
+    font-family: 'Courier New', monospace;
+    font-size: 12px; color: rgba(0,200,255,0.70);
+    flex: 1;
+  }
+  .settings-row-sub {
+    font-family: 'Courier New', monospace;
+    font-size: 10px; color: rgba(0,200,255,0.35);
+    display: block; margin-top: 2px;
+  }
+
+  /* Key bind button */
+  .keybind-btn {
+    min-width: 100px; padding: 7px 12px;
+    border-radius: 7px;
+    border: 1.5px solid rgba(0,200,255,0.38);
+    background: rgba(0,200,255,0.07);
+    color: #00c8ff;
+    font-family: 'Courier New', monospace;
+    font-size: 11px; font-weight: bold; letter-spacing: 0.06em;
+    cursor: pointer; text-align: center;
+    transition: background 0.14s, box-shadow 0.14s, border-color 0.14s;
+    white-space: nowrap;
+  }
+  .keybind-btn:hover {
+    background: rgba(0,200,255,0.15);
+    box-shadow: 0 0 14px rgba(0,200,255,0.25);
+  }
+  .keybind-btn.listening {
+    background: rgba(255,200,0,0.12);
+    border-color: rgba(255,200,0,0.55);
+    color: #ffdd00;
+    text-shadow: 0 0 8px rgba(255,200,0,0.65);
+    box-shadow: 0 0 16px rgba(255,200,0,0.20);
+    animation: keybindPulse 0.8s ease-in-out infinite;
+  }
+  @keyframes keybindPulse {
+    0%,100% { box-shadow: 0 0 16px rgba(255,200,0,0.20); }
+    50%     { box-shadow: 0 0 28px rgba(255,200,0,0.45); }
+  }
+
+  /* Toggle */
+  .settings-toggle {
+    position: relative; width: 46px; height: 24px;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .settings-toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: rgba(0,200,255,0.12);
+    border: 1.5px solid rgba(0,200,255,0.30);
+    border-radius: 12px;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: rgba(0,200,255,0.45);
+    transition: transform 0.2s, background 0.2s;
+  }
+  .settings-toggle input:checked + .toggle-track {
+    background: rgba(0,200,255,0.22); border-color: rgba(0,200,255,0.65);
+  }
+  .settings-toggle input:checked + .toggle-track::after {
+    transform: translateX(22px); background: #00c8ff;
+    box-shadow: 0 0 8px rgba(0,200,255,0.7);
+  }
+
+  /* Slider */
+  .settings-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 120px; height: 4px;
+    border-radius: 2px;
+    background: rgba(0,200,255,0.18);
+    outline: none; cursor: pointer;
+  }
+  .settings-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #00c8ff;
+    box-shadow: 0 0 8px rgba(0,200,255,0.7);
+    cursor: pointer;
+  }
+  .settings-slider::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%; border: none;
+    background: #00c8ff; box-shadow: 0 0 8px rgba(0,200,255,0.7);
+    cursor: pointer;
+  }
+  .slider-val {
+    font-family: 'Courier New', monospace;
+    font-size: 11px; color: rgba(0,200,255,0.6);
+    min-width: 28px; text-align: right;
+  }
+
+  /* Radio group */
+  .settings-radio-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .settings-radio-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1.5px solid rgba(0,200,255,0.30);
+    background: rgba(0,200,255,0.05);
+    color: rgba(0,200,255,0.55);
+    font-family: 'Courier New', monospace;
+    font-size: 11px; font-weight: bold;
+    cursor: pointer;
+    transition: all 0.14s;
+  }
+  .settings-radio-btn.active {
+    background: rgba(0,200,255,0.18);
+    border-color: rgba(0,200,255,0.65);
+    color: #00c8ff;
+    text-shadow: 0 0 7px rgba(0,200,255,0.5);
+  }
+
+  /* Section title */
+  .settings-section-title {
+    font-family: 'Courier New', monospace;
+    font-size: 11px; font-weight: bold;
+    letter-spacing: 0.14em; color: rgba(0,200,255,0.40);
+    margin: 0 0 10px; padding-bottom: 6px;
+    border-bottom: 1px solid rgba(0,200,255,0.10);
+  }
+
+  /* Save indicator */
+  #settingsSavedBadge {
+    position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,255,140,0.12);
+    border: 1px solid rgba(0,255,140,0.35);
+    border-radius: 6px; padding: 4px 14px;
+    font-family: 'Courier New', monospace;
+    font-size: 10px; color: #00ffaa;
+    text-shadow: 0 0 8px rgba(0,255,140,0.6);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  #settingsSavedBadge.visible { opacity: 1; }
+
+  /* ═══════════════════════════════════════════════════════════
+     EXPANSION PACK — estilos DOM
+  ══════════════════════════════════════════════════════════ */
+
+  /* Energy bar */
+  #energyBar {
+    position: fixed; bottom: 210px; right: 16px;
+    width: 12px; height: 140px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(0,200,255,0.3);
+    border-radius: 6px; z-index: 300; pointer-events: none;
+    display: none;
+  }
+  #energyBar.game-active { display: block; }
+  #energyFill {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, #00c8ff, #00ffcc);
+    border-radius: 6px;
+    box-shadow: 0 0 10px rgba(0,200,255,0.8);
+    transition: height 0.1s;
+  }
+  #energyLabel {
+    position: absolute; top: -18px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Courier New', monospace;
+    font-size: 9px; color: rgba(0,200,255,0.6);
+    white-space: nowrap; letter-spacing: 0.08em;
+  }
+
+  /* Random Rewards overlay */
+  #rewardOverlay {
+    position: fixed; inset: 0; z-index: 850;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(3px);
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 18px;
+  }
+  #rewardOverlay.visible { display: flex; }
+  #rewardTitle {
+    font-family: 'Courier New', monospace;
+    font-size: 22px; font-weight: bold; letter-spacing: 0.18em;
+    color: #ffdd00; text-shadow: 0 0 20px rgba(255,200,0,0.8);
+    margin-bottom: 4px;
+  }
+  #rewardCards { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .reward-card {
+    width: 170px; padding: 18px 14px; cursor: pointer;
+    background: rgba(0,12,24,0.95);
+    border: 1.5px solid rgba(0,200,255,0.35); border-radius: 12px;
+    text-align: center; transition: all 0.18s;
+    font-family: 'Courier New', monospace;
+  }
+  .reward-card:hover {
+    border-color: #00c8ff; background: rgba(0,200,255,0.12);
+    box-shadow: 0 0 24px rgba(0,200,255,0.3); transform: translateY(-4px);
+  }
+  .reward-card-icon { font-size: 32px; margin-bottom: 8px; }
+  .reward-card-name { font-size: 12px; font-weight: bold; color: #00c8ff;
+    text-shadow: 0 0 8px rgba(0,200,255,0.5); margin-bottom: 4px; }
+  .reward-card-desc { font-size: 10px; color: rgba(0,200,255,0.5); line-height: 1.4; }
+
+  /* Match Modifiers pre-game */
+  #modifierOverlay {
+    position: fixed; inset: 0; z-index: 600;
+    background: rgba(0,0,0,0.85);
+    display: none; align-items: center; justify-content: center;
+  }
+  #modifierOverlay.visible { display: flex; }
+  #modifierPanel {
+    width: min(460px, 92vw);
+    background: rgba(2,12,24,0.98);
+    border: 1.5px solid rgba(0,200,255,0.35); border-radius: 14px;
+    padding: 28px 24px; font-family: 'Courier New', monospace;
+  }
+  #modifierTitle {
+    font-size: 18px; font-weight: bold; letter-spacing: 0.14em;
+    color: #00c8ff; text-shadow: 0 0 12px rgba(0,200,255,0.6);
+    margin-bottom: 16px; text-align: center;
+  }
+  .mod-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 0; border-bottom: 1px solid rgba(0,200,255,0.08);
+    cursor: pointer;
+  }
+  .mod-row:last-of-type { border-bottom: none; }
+  .mod-name { font-size: 12px; color: rgba(0,200,255,0.75); }
+  .mod-check {
+    width: 22px; height: 22px; border-radius: 4px;
+    border: 1.5px solid rgba(0,200,255,0.4);
+    background: rgba(0,200,255,0.05);
+    display: flex; align-items: center; justify-content: center;
+    color: #00c8ff; font-size: 14px; transition: all 0.15s;
+  }
+  .mod-check.on { background: rgba(0,200,255,0.22); border-color: #00c8ff; }
+  #modifierStartBtn {
+    width: 100%; margin-top: 18px; padding: 12px;
+    border-radius: 8px; border: 1.5px solid rgba(0,200,255,0.5);
+    background: rgba(0,200,255,0.1); color: #00c8ff;
+    font-family: 'Courier New', monospace; font-size: 14px; font-weight: bold;
+    letter-spacing: 0.1em; cursor: pointer; transition: all 0.15s;
+  }
+  #modifierStartBtn:hover { background: rgba(0,200,255,0.22); box-shadow: 0 0 18px rgba(0,200,255,0.3); }
+
+  /* Event banner */
+  #eventBanner {
+    position: fixed; top: 90px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,5,15,0.92); border: 1px solid rgba(255,80,0,0.5);
+    border-radius: 8px; padding: 7px 20px; pointer-events: none;
+    font-family: 'Courier New', monospace; font-size: 12px; font-weight: bold;
+    letter-spacing: 0.12em; color: #ff6020; text-shadow: 0 0 10px rgba(255,80,0,0.7);
+    z-index: 300; opacity: 0; transition: opacity 0.4s;
+  }
+  #eventBanner.visible { opacity: 1; }
+
+  /* Overdrive glow on canvas frame */
+  #overdriveOverlay {
+    position: fixed; inset: 0; pointer-events: none; z-index: 850;
+    opacity: 0; transition: opacity 0.5s;
+    box-shadow: inset 0 0 80px rgba(0,200,255,0.25);
+  }
+  #overdriveOverlay.active { opacity: 1; animation: overdrivePulse 0.6s ease-in-out infinite; }
+  @keyframes overdrivePulse {
+    0%,100% { box-shadow: inset 0 0 60px rgba(0,200,255,0.20); }
+    50%      { box-shadow: inset 0 0 120px rgba(0,220,255,0.45); }
+  }
+
+  /* Chaos mode warning ring */
+  #chaosRing {
+    position: fixed; inset: 0; pointer-events: none; z-index: 840;
+    border: 3px solid transparent; border-radius: 0; opacity: 0; transition: opacity 0.5s;
+  }
+  #chaosRing.active {
+    opacity: 1;
+    border-color: rgba(255,20,20,0.55);
+    box-shadow: inset 0 0 100px rgba(255,0,0,0.15);
+    animation: chaosFlicker 0.4s linear infinite;
+  }
+  @keyframes chaosFlicker {
+    0%,100% { border-color: rgba(255,20,20,0.55); }
+    50%      { border-color: rgba(255,100,0,0.70); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     MULTIPLAYER LOCAL — estilos
+  ══════════════════════════════════════════════════════════ */
+  #p2HUD {
+    position: fixed;
+    bottom: 16px; left: 16px;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    z-index: 200;
+    pointer-events: none;
+    font-family: 'Courier New', monospace;
+  }
+  #p2HUD.visible { display: flex; }
+  #p2Lives {
+    font-size: 16px;
+    color: #ff44cc;
+    text-shadow: 0 0 10px rgba(255,60,200,0.8);
+  }
+  #p2Label {
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    color: rgba(255,80,200,0.6);
+  }
+  #mpToggleBtn {
+    position: fixed;
+    bottom: 56px; left: 50%; transform: translateX(-50%);
+    z-index: 201;
+    background: rgba(0,10,20,0.82);
+    border: 1.5px solid rgba(255,80,200,0.45);
+    border-radius: 8px;
+    color: rgba(255,80,200,0.85);
+    font-family: 'Courier New', monospace;
+    font-size: 12px; font-weight: bold; letter-spacing: 0.08em;
+    padding: 8px 20px; cursor: pointer;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 0 10px rgba(255,80,200,0.12);
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s, opacity 0.2s;
+    opacity: 0; pointer-events: none;
+  }
+  #mpToggleBtn.visible { opacity: 1; pointer-events: all; }
+  #mpToggleBtn:hover {
+    background: rgba(255,80,200,0.14);
+    box-shadow: 0 0 18px rgba(255,80,200,0.30);
+  }
+  #mpToggleBtn:active { transform: translateX(-50%) scale(0.96); }
+  #mpToggleBtn.on {
+    border-color: rgba(255,80,200,0.75);
+    color: #ff44cc;
+    text-shadow: 0 0 8px rgba(255,60,200,0.7);
+    box-shadow: 0 0 16px rgba(255,60,200,0.25);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     MODO ÂNCORA — estilos DOM
+  ══════════════════════════════════════════════════════════ */
+
+  /* HUD container do Modo Âncora */
+  #anchorHUD {
+    position: fixed;
+    bottom: 220px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 310;
+    pointer-events: none;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 220px;
+  }
+  #anchorHUD.visible { display: flex; }
+
+  /* Badge "MODO ÂNCORA" */
+  #anchorBadge {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.22em;
+    color: #ff8800;
+    text-shadow: 0 0 14px rgba(255,130,0,0.9), 0 0 28px rgba(255,80,0,0.5);
+    animation: anchorPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes anchorPulse {
+    0%,100% { text-shadow: 0 0 14px rgba(255,130,0,0.9), 0 0 28px rgba(255,80,0,0.5); }
+    50%      { text-shadow: 0 0 24px rgba(255,160,0,1),   0 0 48px rgba(255,100,0,0.8); }
+  }
+
+  /* Barra de duração do Modo Âncora */
+  #anchorDurTrack {
+    width: 200px; height: 7px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(255,130,0,0.4);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  #anchorDurFill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff4400, #ffaa00);
+    box-shadow: 0 0 10px rgba(255,100,0,0.7);
+    border-radius: 4px;
+    transition: width 0.06s linear;
+  }
+
+  /* Barra de cooldown do Pulse Aniquilador */
+  #pulseTrack {
+    width: 200px; height: 5px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(0,200,255,0.3);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  #pulseFill {
+    height: 100%;
+    background: linear-gradient(90deg, #00c8ff, #00ffcc);
+    box-shadow: 0 0 8px rgba(0,200,255,0.6);
+    border-radius: 3px;
+    transition: width 0.06s linear;
+  }
+  #pulseLabel {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: rgba(0,200,255,0.65);
+  }
+
+  /* Cooldown do Modo Âncora (quando não ativo) */
+  #anchorCooldownBadge {
+    position: fixed;
+    bottom: 220px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 309;
+    pointer-events: none;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: rgba(255,130,0,0.5);
+    display: none;
+  }
+  #anchorCooldownBadge.visible { display: block; }
+
+  /* Botão mobile do Pulse Aniquilador */
+  #anchorPulseBtn {
+    position: fixed;
+    bottom: 120px;
+    right: 28px;
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,130,0,0.6);
+    background: rgba(255,80,0,0.10);
+    color: rgba(255,160,0,0.9);
+    font-size: 22px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: all;
+    cursor: pointer;
+    box-shadow: 0 0 18px rgba(255,100,0,0.25);
+    z-index: 320;
+    transition: background 0.1s, box-shadow 0.1s;
+  }
+  #anchorPulseBtn.visible { display: flex; }
+  #anchorPulseBtn:active {
+    background: rgba(255,100,0,0.30);
+    box-shadow: 0 0 32px rgba(255,130,0,0.55);
+  }
+  #anchorPulseBtn.ready {
+    border-color: rgba(0,200,255,0.7);
+    color: #00ffcc;
+    box-shadow: 0 0 22px rgba(0,200,255,0.4);
+  }
+
+/* ── TELA DE NOME DO JOGADOR ── */
+#nameScreen {
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+}
+#nameScreen.visible { display: flex; }
+#namePanel {
+  background: rgba(2,12,24,0.98);
+  border: 1.5px solid rgba(0,200,255,0.40);
+  border-radius: 16px;
+  padding: 36px 32px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 18px;
+  width: min(380px, 90vw);
+  box-shadow: 0 0 60px rgba(0,200,255,0.15);
+  animation: settingsSlideIn 0.25s cubic-bezier(.22,.68,0,1.2);
+}
+#nameTitle {
+  font-family: 'Courier New', monospace;
+  font-size: 18px; font-weight: bold;
+  letter-spacing: 0.16em; color: #00c8ff;
+  text-shadow: 0 0 14px rgba(0,200,255,0.7);
+}
+#nameSubtitle {
+  font-family: 'Courier New', monospace;
+  font-size: 11px; color: rgba(0,200,255,0.45);
+  letter-spacing: 0.08em; text-align: center;
+}
+#nameInput {
+  width: 100%; padding: 12px 16px;
+  background: rgba(0,200,255,0.06);
+  border: 1.5px solid rgba(0,200,255,0.40);
+  border-radius: 8px; outline: none;
+  font-family: 'Courier New', monospace;
+  font-size: 16px; font-weight: bold;
+  color: #00c8ff; letter-spacing: 0.08em;
+  text-align: center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#nameInput:focus {
+  border-color: rgba(0,200,255,0.75);
+  box-shadow: 0 0 20px rgba(0,200,255,0.25);
+}
+#nameInput::placeholder { color: rgba(0,200,255,0.25); }
+#nameConfirmBtn {
+  width: 100%; padding: 13px;
+  border-radius: 9px;
+  border: 1.5px solid rgba(0,255,160,0.45);
+  background: rgba(0,255,160,0.07);
+  color: #00ffaa; font-family: 'Courier New', monospace;
+  font-size: 14px; font-weight: bold;
+  letter-spacing: 0.10em; cursor: pointer;
+  transition: all 0.15s;
+}
+#nameConfirmBtn:hover {
+  background: rgba(0,255,160,0.16);
+  box-shadow: 0 0 22px rgba(0,255,160,0.25);
+}
+#nameConfirmBtn:active { transform: scale(0.97); }
+#nameCharCount {
+  font-family: 'Courier New', monospace;
+  font-size: 10px; color: rgba(0,200,255,0.35);
+}
+
+/* ── TELA DE PERFIL ── */
+#profileScreen {
+  position: fixed; inset: 0; z-index: 910;
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+}
+#profileScreen.visible { display: flex; }
+
+#profilePanel {
+  background: rgba(2,12,24,0.98);
+  border: 1.5px solid rgba(0,200,255,0.40);
+  border-radius: 16px;
+  padding: 36px 32px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 16px;
+  width: min(420px, 92vw);
+  box-shadow: 0 0 60px rgba(0,200,255,0.15);
+  animation: settingsSlideIn 0.25s cubic-bezier(.22,.68,0,1.2);
+  position: relative;
+}
+
+#profilePanel::before {
+  content: '';
+  position: absolute; top: 0; left: 12%; right: 12%; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,200,255,0.65), transparent);
+}
+
+#profileTitle {
+  font-family: 'Courier New', monospace;
+  font-size: 18px; font-weight: bold;
+  letter-spacing: 0.16em; color: #00c8ff;
+  text-shadow: 0 0 14px rgba(0,200,255,0.7);
+}
+
+#profileAvatar {
+  font-size: 52px; line-height: 1;
+  cursor: pointer;
+  filter: drop-shadow(0 0 12px rgba(0,200,255,0.6));
+  transition: transform 0.15s;
+}
+#profileAvatar:hover { transform: scale(1.12); }
+
+#profileAvatarLabel {
+  font-family: 'Courier New', monospace;
+  font-size: 10px; color: rgba(0,200,255,0.40);
+  letter-spacing: 0.08em;
+}
+
+#profileAvatarPicker {
+  display: flex; flex-wrap: wrap;
+  gap: 10px; justify-content: center;
+  max-width: 320px;
+}
+.avatar-opt {
+  font-size: 28px; cursor: pointer;
+  padding: 6px; border-radius: 8px;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.12s;
+}
+.avatar-opt:hover { transform: scale(1.18); }
+.avatar-opt.selected {
+  border-color: rgba(0,200,255,0.70);
+  background: rgba(0,200,255,0.10);
+}
+
+#profileDivider {
+  width: 85%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,200,255,0.25), transparent);
+}
+
+#profileNameLabel {
+  font-family: 'Courier New', monospace;
+  font-size: 11px; color: rgba(0,200,255,0.50);
+  letter-spacing: 0.10em; align-self: flex-start;
+}
+
+#profileNameInput {
+  width: 100%; padding: 12px 16px;
+  background: rgba(0,200,255,0.06);
+  border: 1.5px solid rgba(0,200,255,0.40);
+  border-radius: 8px; outline: none;
+  font-family: 'Courier New', monospace;
+  font-size: 15px; font-weight: bold;
+  color: #00c8ff; letter-spacing: 0.08em;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#profileNameInput:focus {
+  border-color: rgba(0,200,255,0.75);
+  box-shadow: 0 0 20px rgba(0,200,255,0.25);
+}
+#profileNameInput::placeholder { color: rgba(0,200,255,0.25); }
+
+#profileStats {
+  width: 100%;
+  background: rgba(0,200,255,0.04);
+  border: 1px solid rgba(0,200,255,0.15);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.profile-stat-row {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.profile-stat-label {
+  font-family: 'Courier New', monospace;
+  font-size: 10px; color: rgba(0,200,255,0.45);
+  letter-spacing: 0.08em;
+}
+.profile-stat-val {
+  font-family: 'Courier New', monospace;
+  font-size: 12px; font-weight: bold;
+  color: #00c8ff; text-shadow: 0 0 8px rgba(0,200,255,0.5);
+}
+
+.profile-btn-row {
+  display: flex; gap: 10px; width: 100%;
+}
+
+#profileSaveBtn {
+  flex: 1; padding: 12px;
+  border-radius: 9px;
+  border: 1.5px solid rgba(0,255,136,0.50);
+  background: rgba(0,255,136,0.08);
+  color: #00ff88; font-family: 'Courier New', monospace;
+  font-size: 13px; font-weight: bold;
+  letter-spacing: 0.10em; cursor: pointer;
+  transition: all 0.15s;
+}
+#profileSaveBtn:hover {
+  background: rgba(0,255,136,0.18);
+  box-shadow: 0 0 20px rgba(0,255,136,0.25);
+}
+
+#profileCloseBtn {
+  flex: 1; padding: 12px;
+  border-radius: 9px;
+  border: 1.5px solid rgba(255,60,60,0.40);
+  background: rgba(255,60,60,0.06);
+  color: rgba(255,120,120,0.9); font-family: 'Courier New', monospace;
+  font-size: 13px; font-weight: bold;
+  letter-spacing: 0.10em; cursor: pointer;
+  transition: all 0.15s;
+}
+#profileCloseBtn:hover {
+  background: rgba(255,60,60,0.14);
+  box-shadow: 0 0 18px rgba(255,60,60,0.20);
+}
+
+#profileResetBtn {
+  width: 100%; padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,100,0,0.35);
+  background: rgba(255,100,0,0.05);
+  color: rgba(255,140,0,0.75); font-family: 'Courier New', monospace;
+  font-size: 11px; letter-spacing: 0.08em; cursor: pointer;
+  transition: all 0.15s;
+}
+#profileResetBtn:hover {
+  background: rgba(255,100,0,0.12);
+  color: #ff6600;
+}
+
+#profileFeedback {
+  font-family: 'Courier New', monospace;
+  font-size: 11px; color: #00ff88;
+  text-shadow: 0 0 8px rgba(0,255,136,0.6);
+  min-height: 16px; opacity: 0;
+  transition: opacity 0.3s;
+}
+#profileFeedback.visible { opacity: 1; }
+/* ── GAME OVER DOM OVERLAY ── */
+#gameOverDOM {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 4vh, 28px);
+  padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+  text-align: center;
+  background:
+    radial-gradient(ellipse at center, rgba(5,6,13,.55), rgba(5,6,13,.95)),
+    linear-gradient(rgba(40,80,120,.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(40,80,120,.18) 1px, transparent 1px);
+  background-size: 100% 100%, 48px 48px, 48px 48px;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  animation: goFadeIn .45s ease both;
+}
+#gameOverDOM.visible { display: flex; }
+
+@keyframes goFadeIn { from{opacity:0} to{opacity:1} }
+@keyframes goDropIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@keyframes goFlicker {
+  0%,18%,22%,25%,53%,57%,100%{opacity:1}
+  20%,24%,55%{opacity:.78}
+}
+@keyframes goPulseGold { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+#goTitle {
+  font-family: 'Orbitron', 'Courier New', sans-serif;
+  font-weight: 900;
+  font-size: clamp(40px, 13vw, 88px);
+  letter-spacing: .08em;
+  color: #fff;
+  text-shadow: 0 0 8px #ff2e4d, 0 0 24px #ff2e4d, 0 0 52px rgba(255,46,77,.7);
+  animation: goFlicker 3.2s infinite, goDropIn .5s .05s ease both;
+}
+
+#goScoreBlock {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  animation: goDropIn .5s .15s ease both;
+}
+#goScoreLabel {
+  font-size: clamp(12px, 3.2vw, 16px);
+  letter-spacing: .35em;
+  color: #25e6ff;
+  text-transform: uppercase;
+  opacity: .85;
+}
+#goScoreValue {
+  font-family: 'Orbitron', 'Courier New', sans-serif;
+  font-weight: 700;
+  font-size: clamp(64px, 22vw, 150px);
+  line-height: .9;
+  color: #fff;
+  text-shadow: 0 0 14px #25e6ff, 0 0 40px rgba(37,230,255,.6);
+}
+
+#goMeta {
+  display: flex; align-items: center; justify-content: center;
+  gap: clamp(14px, 5vw, 30px);
+  flex-wrap: wrap;
+  font-size: clamp(13px, 3.6vw, 17px);
+  color: #7da3c0;
+  animation: goDropIn .5s .25s ease both;
+}
+#goMeta .go-item { display: flex; align-items: center; gap: 7px; }
+#goMeta .go-num  { color: #dff3ff; }
+#goNewRecord {
+  color: #ffcf3a;
+  text-shadow: 0 0 10px rgba(255,207,58,.7);
+  animation: goPulseGold 1.1s infinite;
+}
+
+#goActions {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; width: 100%; max-width: 340px;
+  margin-top: clamp(4px, 2vh, 14px);
+  animation: goDropIn .5s .35s ease both;
+}
+.go-btn {
+  width: 100%;
+  font-family: 'Orbitron', 'Courier New', sans-serif;
+  font-weight: 700;
+  font-size: clamp(15px, 4.2vw, 19px);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 15px 18px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: transparent;
+  color: #eaf6ff;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .2s ease, background .2s ease;
+}
+.go-btn:active { transform: scale(.96); }
+#goBtnRestart {
+  background: linear-gradient(180deg, rgba(37,230,255,.20), rgba(37,230,255,.06));
+  border-color: #25e6ff;
+  color: #eaffff;
+  box-shadow: 0 0 18px rgba(37,230,255,.35), inset 0 0 14px rgba(37,230,255,.18);
+}
+#goBtnRestart:hover { box-shadow: 0 0 26px rgba(37,230,255,.6), inset 0 0 18px rgba(37,230,255,.25); }
+#goBtnMenu {
+  border-color: rgba(125,163,192,.45);
+  color: #7da3c0;
+}
+#goBtnMenu:hover { border-color: #7da3c0; color: #cfe6f5; }
+#goBtnRanking {
+  background: none; border: none; cursor: pointer;
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  font-size: clamp(13px, 3.6vw, 15px);
+  letter-spacing: .18em;
+  color: #ff3df0;
+  text-transform: uppercase;
+  opacity: .85;
+  padding: 8px;
+  transition: opacity .2s, text-shadow .2s;
+}
+#goBtnRanking:hover { opacity: 1; text-shadow: 0 0 12px rgba(255,61,240,.7); }
+
+/* ── MODAL DE RANKING ── */
+#rankingModal {
+  position: fixed; inset: 0; z-index: 960;
+  display: none;
+  align-items: center; justify-content: center;
+  padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+  background: rgba(3,4,10,.78);
+  backdrop-filter: blur(4px);
+}
+#rankingModal.open { display: flex; animation: goFadeIn .25s ease both; }
+#rankingCard {
+  width: 100%; max-width: 420px;
+  max-height: 86vh;
+  display: flex; flex-direction: column;
+  background: rgba(10,16,30,.82);
+  border: 1.5px solid rgba(37,230,255,.35);
+  border-radius: 16px;
+  box-shadow: 0 0 40px rgba(37,230,255,.25);
+  overflow: hidden;
+  animation: goDropIn .35s ease both;
+}
+#rankingHead {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(37,230,255,.18);
+}
+#rankingHead h2 {
+  font-family: 'Orbitron', 'Courier New', sans-serif;
+  font-weight: 700; font-size: 17px; letter-spacing: .12em;
+  color: #25e6ff;
+  text-shadow: 0 0 12px rgba(37,230,255,.5);
+}
+#rankingCloseBtn {
+  background: none; border: none; cursor: pointer;
+  color: #7da3c0; font-size: 26px; line-height: 1;
+  padding: 0 4px; transition: color .15s, transform .15s;
+}
+#rankingCloseBtn:hover { color: #fff; transform: scale(1.1); }
+#rankingList {
+  list-style: none;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+#rankingList li {
+  display: grid;
+  grid-template-columns: 34px 1fr auto auto;
+  align-items: center; gap: 10px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  font-size: 14px;
+  background: rgba(255,255,255,.02);
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+}
+#rankingList li .rk-pos  { color: #7da3c0; font-weight: bold; text-align: center; }
+#rankingList li .rk-name { color: #dff3ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#rankingList li .rk-pts  { color: #25e6ff; }
+#rankingList li .rk-time { color: #7da3c0; font-size: 12px; }
+#rankingList li.rk-top .rk-pos { color: #ffcf3a; }
+#rankingList li.rk-me {
+  background: rgba(255,61,240,.12);
+  border: 1px solid rgba(255,61,240,.45);
+  box-shadow: inset 0 0 14px rgba(255,61,240,.12);
+}
+#rankingList li.rk-me .rk-name { color: #ff3df0; }
+#rankingList li.rk-me .rk-pts  { color: #ff3df0; }
+/* ── APAGAR PERFIL — botão + confirmação ── */
+#profileDeleteBtn {
+  width: 100%; padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,40,80,0.45);
+  background: rgba(255,40,80,0.06);
+  color: rgba(255,90,110,0.9);
+  font-family: 'Courier New', monospace;
+  font-size: 11px; letter-spacing: 0.08em; cursor: pointer;
+  transition: all 0.15s;
+}
+#profileDeleteBtn:hover {
+  background: rgba(255,40,80,0.14);
+  color: #ff3355;
+  box-shadow: 0 0 14px rgba(255,40,80,0.25);
+}
+#profileDeleteConfirm {
+  position: absolute; inset: 0; z-index: 10;
+  display: none;
+  align-items: center; justify-content: center;
+  background: rgba(2,8,16,0.88);
+  border-radius: 16px;
+  backdrop-filter: blur(3px);
+}
+#profileDeleteConfirm.visible { display: flex; }
+#profileDeleteConfirmBox {
+  width: min(300px, 86%);
+  background: rgba(8,14,26,0.98);
+  border: 1.5px solid rgba(255,40,80,0.50);
+  border-radius: 14px;
+  padding: 24px 22px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  box-shadow: 0 0 32px rgba(255,40,80,0.22);
+  font-family: 'Courier New', monospace;
+}
+#profileDeleteConfirmTitle {
+  font-size: 16px; font-weight: bold; letter-spacing: 0.10em;
+  color: #ff4466; text-shadow: 0 0 12px rgba(255,40,80,0.6);
+}
+#profileDeleteConfirmMsg {
+  font-size: 11px; color: rgba(0,200,255,0.55);
+  text-align: center; line-height: 1.4;
+}
+#profileDeleteConfirmBtns { display: flex; gap: 10px; width: 100%; }
+#profileDeleteYes, #profileDeleteNo {
+  flex: 1; padding: 11px; border-radius: 8px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px; font-weight: bold; letter-spacing: 0.10em;
+  cursor: pointer; transition: all 0.15s;
+}
+#profileDeleteYes {
+  border: 1.5px solid rgba(255,40,80,0.55);
+  background: rgba(255,40,80,0.10); color: #ff5577;
+}
+#profileDeleteYes:hover {
+  background: rgba(255,40,80,0.20);
+  box-shadow: 0 0 16px rgba(255,40,80,0.30);
+}
+#profileDeleteNo {
+  border: 1.5px solid rgba(0,200,255,0.45);
+  background: rgba(0,200,255,0.07); color: #00c8ff;
+}
+#profileDeleteNo:hover {
+  background: rgba(0,200,255,0.16);
+  box-shadow: 0 0 16px rgba(0,200,255,0.25);
+}
+/* ── Botão X (voltar ao menu) na tela de Modificadores ── */
+#modifierPanel { position: relative; }
+#modifierCloseBtn {
+  position: absolute; top: 12px; right: 12px;
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,200,255,0.30);
+  background: rgba(0,10,20,0.6);
+  color: rgba(0,200,255,0.7);
+  font-size: 16px; line-height: 1; cursor: pointer;
+  font-family: 'Courier New', monospace;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  z-index: 2;
+}
+#modifierCloseBtn:hover {
+  background: rgba(0,200,255,0.14);
+  color: #00c8ff;
+  box-shadow: 0 0 12px rgba(0,200,255,0.25);
+}
+#modifierCloseBtn:active { transform: scale(0.92); }
