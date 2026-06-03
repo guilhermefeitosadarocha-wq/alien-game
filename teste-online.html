@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON SIEGE — Teste Online (Fase 0)</title>
+
+<!-- Biblioteca oficial do Supabase para Realtime -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #050a14;
+    color: #00c8ff;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    background: rgba(0,15,30,0.85);
+    border: 1.5px solid rgba(0,200,255,0.4);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 0 30px rgba(0,200,255,0.15);
+  }
+  h1 {
+    font-size: 18px;
+    letter-spacing: 0.15em;
+    color: #00c8ff;
+    text-shadow: 0 0 12px rgba(0,200,255,0.7);
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .sub {
+    text-align: center;
+    color: rgba(0,200,255,0.55);
+    font-size: 11px;
+    margin-bottom: 20px;
+  }
+  .status {
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 16px;
+    border: 1.5px solid;
+  }
+  .status.conectando { color: #ffcc00; border-color: rgba(255,200,0,0.5); background: rgba(255,200,0,0.06); }
+  .status.ok        { color: #00ff99; border-color: rgba(0,255,150,0.5); background: rgba(0,255,150,0.08); }
+  .status.erro     { color: #ff4466; border-color: rgba(255,60,90,0.5); background: rgba(255,60,90,0.08); }
+
+  .inputrow {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  input {
+    flex: 1;
+    background: rgba(0,0,0,0.5);
+    border: 1.5px solid rgba(0,200,255,0.35);
+    border-radius: 6px;
+    color: #00c8ff;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+  }
+  input:focus { border-color: rgba(0,200,255,0.7); box-shadow: 0 0 12px rgba(0,200,255,0.2); }
+  button {
+    background: rgba(0,200,255,0.10);
+    border: 1.5px solid rgba(0,200,255,0.55);
+    border-radius: 6px;
+    color: #00c8ff;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+  button:hover  { background: rgba(0,200,255,0.20); box-shadow: 0 0 12px rgba(0,200,255,0.3); }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .log {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(0,200,255,0.18);
+    border-radius: 8px;
+    padding: 14px;
+    height: 280px;
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .msg { padding: 4px 0; border-bottom: 1px dashed rgba(0,200,255,0.08); }
+  .msg:last-child { border-bottom: none; }
+  .msg .quem  { font-weight: bold; }
+  .msg.eu  .quem  { color: #ff44cc; }
+  .msg.outro .quem { color: #00ff99; }
+  .msg.sistema { color: rgba(255,200,0,0.7); font-style: italic; }
+  .hora { color: rgba(0,200,255,0.4); font-size: 10px; margin-right: 6px; }
+
+  .info {
+    margin-top: 16px;
+    padding: 10px 14px;
+    background: rgba(0,200,255,0.05);
+    border-left: 3px solid rgba(0,200,255,0.4);
+    border-radius: 4px;
+    font-size: 11px;
+    color: rgba(0,200,255,0.65);
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>◈ TESTE ONLINE — FASE 0 ◈</h1>
+  <p class="sub">Provando que duas abas conseguem conversar em tempo real</p>
+
+  <div id="status" class="status conectando">conectando ao supabase…</div>
+
+  <div class="inputrow">
+    <input id="msgInput" type="text" placeholder="digite uma mensagem e aperte Enter" maxlength="80">
+    <button id="sendBtn" disabled>ENVIAR</button>
+  </div>
+
+  <div id="log" class="log">
+    <div class="msg sistema">aguardando conexão…</div>
+  </div>
+
+  <div class="info">
+    <strong>Como testar:</strong> abra esta mesma página em <strong>duas abas</strong> do navegador.
+    Quando as duas mostrarem "conectado", escreva algo em uma — deve aparecer na outra na mesma hora.
+    <br><br>
+    <strong>Identificador desta aba:</strong> <span id="meuId">…</span>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+//  CONFIG — usa a mesma chave pública do jogo (já é "publishable")
+// ─────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://xasgwdhartnrivgrzvri.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_L-_YjiayMOqtrX324DQy9w_JZbyZw-H';
+
+// Nome da "sala" — todas as abas que usarem este nome se conectam juntas
+const CANAL = 'fase-zero-teste';
+
+// Identificador único desta aba (pra distinguir "eu" de "outros")
+const MEU_ID = 'aba-' + Math.random().toString(36).slice(2, 8);
+document.getElementById('meuId').textContent = MEU_ID;
+
+// ─────────────────────────────────────────────────────────────
+//  ELEMENTOS DA UI
+// ─────────────────────────────────────────────────────────────
+const statusEl = document.getElementById('status');
+const logEl    = document.getElementById('log');
+const inputEl  = document.getElementById('msgInput');
+const sendBtn  = document.getElementById('sendBtn');
+
+function setStatus(texto, classe) {
+  statusEl.textContent = texto;
+  statusEl.className = 'status ' + classe;
+}
+
+function addLog({ tipo, quem, texto }) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + tipo;
+  const hora = new Date().toLocaleTimeString();
+  if (tipo === 'sistema') {
+    div.innerHTML = `<span class="hora">${hora}</span>${texto}`;
+  } else {
+    div.innerHTML = `<span class="hora">${hora}</span><span class="quem">${quem}:</span> ${texto}`;
+  }
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  CONECTAR AO SUPABASE REALTIME
+// ─────────────────────────────────────────────────────────────
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Cria um "canal de transmissão" — todas as abas no mesmo canal se ouvem
+const canal = supa.channel(CANAL, {
+  config: { broadcast: { self: false } }   // não recebe as próprias mensagens
+});
+
+// Quando chegar uma mensagem do tipo 'oi' de outra aba
+canal.on('broadcast', { event: 'oi' }, ({ payload }) => {
+  addLog({ tipo: 'outro', quem: payload.de, texto: payload.texto });
+});
+
+// Tenta se inscrever no canal
+canal.subscribe((estado) => {
+  if (estado === 'SUBSCRIBED') {
+    setStatus('✓ conectado — pode mandar mensagens', 'ok');
+    sendBtn.disabled = false;
+    addLog({ tipo: 'sistema', texto: 'conectado! abra esta página numa segunda aba e escreva algo.' });
+  } else if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT') {
+    setStatus('✗ erro de conexão', 'erro');
+    addLog({ tipo: 'sistema', texto: 'falha ao conectar. veja o console (F12) para detalhes.' });
+  } else if (estado === 'CLOSED') {
+    setStatus('conexão fechada', 'erro');
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  ENVIAR MENSAGEM
+// ─────────────────────────────────────────────────────────────
+function enviar() {
+  const texto = inputEl.value.trim();
+  if (!texto) return;
+  canal.send({
+    type:    'broadcast',
+    event:   'oi',
+    payload: { de: MEU_ID, texto: texto }
+  });
+  addLog({ tipo: 'eu', quem: MEU_ID + ' (você)', texto: texto });
+  inputEl.value = '';
+}
+
+sendBtn.addEventListener('click', enviar);
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') enviar();
+});
+</script>
+
+</body>
+</html>
