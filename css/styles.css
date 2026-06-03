@@ -909,7 +909,7 @@
   /* O botão do pause é criado inline no HTML */
   #settingsBtn {
     position: fixed;
-    bottom: 80px; left: 50%; transform: translateX(-50%);
+    bottom: 54px; left: 50%; transform: translateX(-50%);
     z-index: 201;
     background: rgba(0,10,20,0.82);
     border: 1.5px solid rgba(0,200,255,0.40);
@@ -1340,7 +1340,7 @@
   }
   #mpToggleBtn {
     position: fixed;
-    bottom: 56px; left: 50%; transform: translateX(-50%);
+    bottom: 12px; left: 50%; transform: translateX(-50%);
     z-index: 201;
     background: rgba(0,10,20,0.82);
     border: 1.5px solid rgba(255,80,200,0.45);
