@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON SIEGE — Teste Online (Fase 1)</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #050a14;
+    color: #00c8ff;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 14px;
+  }
+  h1 {
+    font-size: 16px; letter-spacing: 0.15em;
+    color: #00c8ff; text-shadow: 0 0 12px rgba(0,200,255,0.7);
+    margin-bottom: 4px;
+  }
+  .sub {
+    color: rgba(0,200,255,0.55); font-size: 11px; margin-bottom: 10px;
+    text-align: center;
+  }
+  .status {
+    padding: 6px 14px; border-radius: 6px;
+    font-size: 12px; font-weight: bold;
+    border: 1.5px solid;
+    margin-bottom: 10px;
+  }
+  .status.conectando { color: #ffcc00; border-color: rgba(255,200,0,0.5); background: rgba(255,200,0,0.06); }
+  .status.ok        { color: #00ff99; border-color: rgba(0,255,150,0.5); background: rgba(0,255,150,0.08); }
+  .status.erro     { color: #ff4466; border-color: rgba(255,60,90,0.5); background: rgba(255,60,90,0.08); }
+  canvas {
+    background: #02060f;
+    border: 1.5px solid rgba(0,200,255,0.4);
+    border-radius: 10px;
+    box-shadow: 0 0 24px rgba(0,200,255,0.15);
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+  .info {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(0,200,255,0.05);
+    border-left: 3px solid rgba(0,200,255,0.4);
+    border-radius: 4px;
+    font-size: 11px;
+    color: rgba(0,200,255,0.7);
+    line-height: 1.6;
+    max-width: 600px;
+  }
+  .info strong { color: #00c8ff; }
+  .stats {
+    margin-top: 8px;
+    font-size: 10px;
+    color: rgba(0,200,255,0.5);
+    font-family: 'Courier New', monospace;
+  }
+</style>
+</head>
+<body>
+
+<h1>◈ FASE 1 — DUAS NAVES ONLINE ◈</h1>
+<p class="sub">arena vazia · WASD pra mover · sua nave manda posição; a outra recebe</p>
+
+<div id="status" class="status conectando">conectando…</div>
+
+<canvas id="cv" width="600" height="400"></canvas>
+
+<div class="stats" id="stats">aguardando…</div>
+
+<div class="info">
+  <strong>Como testar:</strong> abre esta página em duas abas (ou em dois computadores). Em cada uma,
+  use <strong>WASD</strong> pra mover. A nave AZUL é a sua. A nave ROSA aparece quando alguém entra.
+  <br><br>
+  Você verá a nave rosa se mover de forma suave (interpolada) — isso é proposital. Em tempo real
+  as posições chegam ~10x por segundo, e a interpolação preenche o resto pra evitar movimento aos trancos.
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+//  CONFIG
+// ─────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://xasgwdhartnrivgrzvri.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_L-_YjiayMOqtrX324DQy9w_JZbyZw-H';
+const CANAL = 'fase-um-naves';
+
+// Identidade desta aba (curtinha, p/ legenda)
+const MEU_ID = 'P' + Math.random().toString(36).slice(2, 5).toUpperCase();
+
+// ─────────────────────────────────────────────────────────────
+//  ESTADO DAS NAVES
+// ─────────────────────────────────────────────────────────────
+const ARENA_W = 600, ARENA_H = 400;
+const SPEED = 220;       // px/seg
+const SEND_HZ = 10;      // 10 envios por segundo (gasta ~26k mensagens/hora por aba)
+const INTERP_DELAY = 0.10; // 100ms atrás — janela para suavizar
+
+// MINHA nave (a azul, controlada por mim)
+const eu = {
+  x: ARENA_W/2, y: ARENA_H/2,
+  cor: '#00c8ff', glow: 'rgba(0,200,255,0.85)',
+  id: MEU_ID
+};
+
+// Outras naves (mapa de id → { lastX, lastY, buffer de posições com tempo })
+const outros = new Map();
+
+// Input
+const keys = {};
+addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; });
+addEventListener('keyup',   e => { keys[e.key.toLowerCase()] = false; });
+
+// ─────────────────────────────────────────────────────────────
+//  UI
+// ─────────────────────────────────────────────────────────────
+const statusEl = document.getElementById('status');
+const statsEl  = document.getElementById('stats');
+function setStatus(txt, cls) {
+  statusEl.textContent = txt;
+  statusEl.className = 'status ' + cls;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  CANVAS
+// ─────────────────────────────────────────────────────────────
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+function desenharNave(x, y, cor, glow, label, ehEu) {
+  ctx.save();
+  ctx.translate(x, y);
+  // glow
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = cor;
+  ctx.beginPath();
+  ctx.moveTo(0, -12);
+  ctx.lineTo(10, 10);
+  ctx.lineTo(-10, 10);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  // label
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = ehEu ? 'rgba(0,200,255,0.85)' : 'rgba(255,80,200,0.85)';
+  ctx.font = "bold 10px 'Courier New', monospace";
+  ctx.textAlign = 'center';
+  ctx.fillText(label + (ehEu ? ' (você)' : ''), x, y - 18);
+}
+
+function desenharGrid() {
+  ctx.strokeStyle = 'rgba(0,200,255,0.08)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= ARENA_W; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ARENA_H); ctx.stroke();
+  }
+  for (let y = 0; y <= ARENA_H; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ARENA_W, y); ctx.stroke();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  CONECTAR AO SUPABASE
+// ─────────────────────────────────────────────────────────────
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const canal = supa.channel(CANAL, { config: { broadcast: { self: false } } });
+
+let conectado = false;
+
+// Receber posição de outra aba
+canal.on('broadcast', { event: 'pos' }, ({ payload }) => {
+  const id = payload.id;
+  if (id === MEU_ID) return; // ignora ecos
+  let nave = outros.get(id);
+  if (!nave) {
+    nave = {
+      buffer: [],         // [{ t, x, y }] — fila pra interpolar
+      x: payload.x, y: payload.y
+    };
+    outros.set(id, nave);
+  }
+  // Adiciona ao buffer com timestamp local de chegada
+  nave.buffer.push({ t: performance.now()/1000, x: payload.x, y: payload.y });
+  // Mantém o buffer pequeno (1 segundo)
+  while (nave.buffer.length > 0 && (performance.now()/1000 - nave.buffer[0].t) > 1.0) {
+    nave.buffer.shift();
+  }
+});
+
+// Receber aviso de saída
+canal.on('broadcast', { event: 'sai' }, ({ payload }) => {
+  outros.delete(payload.id);
+});
+
+// Avisar quando a aba fechar
+addEventListener('beforeunload', () => {
+  canal.send({ type: 'broadcast', event: 'sai', payload: { id: MEU_ID } });
+});
+
+canal.subscribe(estado => {
+  if (estado === 'SUBSCRIBED') {
+    conectado = true;
+    setStatus('✓ conectado — abra em outra aba', 'ok');
+  } else if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT') {
+    setStatus('✗ erro de conexão (veja F12)', 'erro');
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  LOOP DO JOGO
+// ─────────────────────────────────────────────────────────────
+let ultimoTempo = performance.now();
+let proximoEnvio = 0;
+let msgsEnviadas = 0, msgsRecebidas = 0;
+
+// Marca recebidas
+const _origOn = canal.on.bind(canal);
+// (já contamos via handler acima — usamos um pequeno truque:)
+const inc = () => msgsRecebidas++;
+canal.on('broadcast', { event: 'pos' }, inc);
+
+function loop(agora) {
+  const dt = Math.min((agora - ultimoTempo) / 1000, 0.05);
+  ultimoTempo = agora;
+
+  // ── 1) Mover MINHA nave (WASD) ──
+  let dx = 0, dy = 0;
+  if (keys['w'] || keys['arrowup'])    dy -= 1;
+  if (keys['s'] || keys['arrowdown'])  dy += 1;
+  if (keys['a'] || keys['arrowleft'])  dx -= 1;
+  if (keys['d'] || keys['arrowright']) dx += 1;
+  if (dx || dy) {
+    const len = Math.hypot(dx, dy);
+    dx /= len; dy /= len;
+    eu.x += dx * SPEED * dt;
+    eu.y += dy * SPEED * dt;
+    // limites da arena
+    eu.x = Math.max(15, Math.min(ARENA_W - 15, eu.x));
+    eu.y = Math.max(15, Math.min(ARENA_H - 15, eu.y));
+  }
+
+  // ── 2) Enviar minha posição ~SEND_HZ vezes por segundo ──
+  if (conectado && agora >= proximoEnvio) {
+    canal.send({
+      type: 'broadcast',
+      event: 'pos',
+      payload: { id: MEU_ID, x: eu.x, y: eu.y }
+    });
+    msgsEnviadas++;
+    proximoEnvio = agora + (1000 / SEND_HZ);
+  }
+
+  // ── 3) Desenhar ──
+  ctx.clearRect(0, 0, ARENA_W, ARENA_H);
+  desenharGrid();
+
+  // Naves dos outros: interpolar olhando o buffer ~100ms atrás
+  const tRender = performance.now()/1000 - INTERP_DELAY;
+  for (const [id, nave] of outros) {
+    // Acha duas amostras que cercam tRender
+    let a = null, b = null;
+    for (let i = 0; i < nave.buffer.length - 1; i++) {
+      if (nave.buffer[i].t <= tRender && nave.buffer[i+1].t >= tRender) {
+        a = nave.buffer[i]; b = nave.buffer[i+1]; break;
+      }
+    }
+    let x = nave.x, y = nave.y;
+    if (a && b) {
+      const k = (tRender - a.t) / Math.max(b.t - a.t, 0.001);
+      x = a.x + (b.x - a.x) * k;
+      y = a.y + (b.y - a.y) * k;
+    } else if (nave.buffer.length > 0) {
+      const ult = nave.buffer[nave.buffer.length - 1];
+      x = ult.x; y = ult.y;
+    }
+    nave.x = x; nave.y = y;
+    desenharNave(x, y, '#ff44cc', 'rgba(255,80,200,0.85)', id, false);
+  }
+
+  // Minha nave por cima
+  desenharNave(eu.x, eu.y, eu.cor, eu.glow, eu.id, true);
+
+  // Stats
+  statsEl.textContent =
+    `meu id: ${MEU_ID}  ·  outros conectados: ${outros.size}  ·  ` +
+    `enviadas: ${msgsEnviadas}  ·  recebidas: ${msgsRecebidas}`;
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
