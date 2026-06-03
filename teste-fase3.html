@@ -160,7 +160,7 @@
 <div id="game" class="hide" style="display:flex; flex-direction:column; align-items:center;">
   <div class="hud">
     <span>Sala: <b id="codigoSala">—</b></span>
-    <button id="btnCopiar" title="Copiar código" type="button">📋 COPIAR</button>
+    <button id="btnCopiar" title="Copiar código" type="button">📋 COPIAR LINK</button>
     <span id="papel" class="role host">HOST</span>
     <span class="score">SCORE: <span id="scoreV">0</span></span>
     <span class="lives" id="vidasInfo">P1:♥♥♥</span>
@@ -254,6 +254,23 @@ document.getElementById('btnVoltar').addEventListener('click', () => {
   gameoverEl.classList.add('hide');
   sairDaSala();
 });
+
+// ═══════════════════════════════════════════════════════════════
+//  AUTO-JOIN: se a URL tem ?sala=XXXX, entra direto como convidado
+// ═══════════════════════════════════════════════════════════════
+(function autoJoin() {
+  const params = new URLSearchParams(location.search);
+  const salaParam = params.get('sala');
+  if (salaParam) {
+    // Espera o DOM e o Supabase carregarem, então entra
+    addEventListener('DOMContentLoaded', () => {});
+    setTimeout(() => {
+      let codigo = salaParam.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+      if (!codigo.startsWith('NEON-')) codigo = 'NEON-' + codigo.replace(/^-+/, '');
+      iniciarSala(codigo, false); // false = convidado
+    }, 300); // pequeno delay pro Supabase client inicializar
+  }
+})();
 
 // ═══════════════════════════════════════════════════════════════
 //  ESTADO
@@ -373,20 +390,22 @@ document.getElementById('btnSair').addEventListener('click', sairDaSala);
 document.getElementById('btnCopiar').addEventListener('click', async () => {
   if (!codigoAtual) return;
   const btn = document.getElementById('btnCopiar');
-  try {
-    await navigator.clipboard.writeText(codigoAtual);
-    btn.textContent = '✓ COPIADO';
-    btn.classList.add('copiado');
-  } catch (e) {
-    const tmp = document.createElement('textarea');
-    tmp.value = codigoAtual;
-    document.body.appendChild(tmp);
-    tmp.select();
-    try { document.execCommand('copy'); btn.textContent = '✓ COPIADO'; btn.classList.add('copiado'); }
-    catch (e2) { btn.textContent = '✕ FALHOU'; }
-    document.body.removeChild(tmp);
-  }
-  setTimeout(() => { btn.textContent = '📋 COPIAR'; btn.classList.remove('copiado'); }, 1600);
+  // Monta o link completo com o código da sala na URL
+    const link = location.origin + location.pathname + '?sala=' + encodeURIComponent(codigoAtual);
+    try {
+      await navigator.clipboard.writeText(link);
+      btn.textContent = '✓ LINK COPIADO';
+      btn.classList.add('copiado');
+    } catch (e) {
+      const tmp = document.createElement('textarea');
+      tmp.value = link;
+      document.body.appendChild(tmp);
+      tmp.select();
+      try { document.execCommand('copy'); btn.textContent = '✓ LINK COPIADO'; btn.classList.add('copiado'); }
+      catch (e2) { btn.textContent = '✕ FALHOU'; }
+      document.body.removeChild(tmp);
+    }
+  setTimeout(() => { btn.textContent = '📋 COPIAR LINK'; btn.classList.remove('copiado'); }, 1600);
 });
 addEventListener('beforeunload', () => {
   if (canal) canal.send({ type: 'broadcast', event: 'sai', payload: { id: MEU_ID } });
