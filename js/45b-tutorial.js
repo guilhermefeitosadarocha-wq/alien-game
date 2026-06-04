@@ -94,16 +94,11 @@ const TutorialSystem = {
 
   // ── Detectar mobile ──
   _detectMobile() {
-    // Checa se os controles mobile estão visíveis
-    var mc = document.getElementById('mobileControls');
-    if (mc) {
-      var st = getComputedStyle(mc);
-      if (st.display !== 'none' && st.visibility !== 'hidden') return true;
-    }
-    // Fallback: tela touch com pointer grosso (celular/tablet)
-    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return true;
-    // Fallback: tela estreita
-    if (window.innerWidth <= 768) return true;
+    // Celular/tablet de verdade: tela touch SEM hover (sem mouse/trackpad).
+    // Desktop com tela touch ainda tem hover (mouse), então não dispara.
+    if (window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches) return true;
+    // Fallback: tela muito estreita (celular em retrato)
+    if (window.innerWidth <= 600 && 'ontouchstart' in window) return true;
     return false;
   },
 
