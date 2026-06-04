@@ -1838,6 +1838,7 @@ const ProfileDelete = {
 
     // Sincroniza o nome do ranking de volta ao padrão
     if (typeof SupabaseSystem !== 'undefined') SupabaseSystem._playerName = 'Jogador';
+    if (typeof TutorialSystem !== 'undefined') TutorialSystem.reset();
 
     this._close();
     if (typeof ProfileSystem._showFeedback === 'function')
