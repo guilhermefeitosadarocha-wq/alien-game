@@ -23,7 +23,7 @@ const TutorialSystem = {
       text: 'MOVA SUA NAVE',
       sub: 'Use as teclas W A S D',
       check: function() {
-        return (Input && (Input.keys['w'] || Input.keys['a'] || Input.keys['s'] || Input.keys['d']));
+        return (Input && (Input.keys['KeyW'] || Input.keys['KeyA'] || Input.keys['KeyS'] || Input.keys['KeyD']));
       }
     },
     {
@@ -37,7 +37,7 @@ const TutorialSystem = {
       text: 'ATIRE!',
       sub: 'Clique do mouse ou aperte ESPAÇO',
       check: function() {
-        return (Input && (Input.mouse || Input.keys[' ']));
+        return (Input && (Input.shooting || Input.keys['Space']));
       }
     },
     {
@@ -45,7 +45,7 @@ const TutorialSystem = {
       text: 'DESVIE COM DASH',
       sub: 'Aperte SHIFT pra desviar rápido',
       check: function() {
-        return (Input && Input.keys['shift']);
+        return (Input && (Input.keys['ShiftLeft'] || Input.keys['ShiftRight']));
       }
     },
     {
