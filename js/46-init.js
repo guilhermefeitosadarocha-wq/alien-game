@@ -49,5 +49,6 @@ MultiplayerSystem.init();
 MPModeSelect.init();
 AnchorMode.init();
 GameOverDOM.init();
+TutorialSystem.init();
 MobileExperience.init();
 requestAnimationFrame(ts => { Game.lastTime = ts; Game.loop(ts); });
