@@ -50,5 +50,6 @@ MPModeSelect.init();
 AnchorMode.init();
 GameOverDOM.init();
 TutorialSystem.init();
+ShotEquipSystem.init();
 MobileExperience.init();
 requestAnimationFrame(ts => { Game.lastTime = ts; Game.loop(ts); });

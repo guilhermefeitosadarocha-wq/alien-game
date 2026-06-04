@@ -146,12 +146,24 @@ const ShopUI = {
 
       // Listener de compra — único por card
       btn.addEventListener('click', () => {
+        // Shot Equip: se já comprou um tiro equipável, clica pra equipar
+        if (typeof ShotEquipSystem !== 'undefined' && ShotEquipSystem.isEquippable(item.id)
+            && PurchaseSystem.isMaxed(item.id)) {
+          ShotEquipSystem.equip(item.id);
+          this.showToast(item.name + ' equipado!', 'success');
+          SFX.play('shop_buy');
+          return;
+        }
         const result = PurchaseSystem.buy(item.id);
         if (result === 'ok') {
           this.flashCoin();
           this._flashCard(item.id, 'success');
           this.showToast('+1 ' + item.name + ' comprado!', 'success');
           SFX.play('shop_buy');
+          // Auto-equipar ao comprar tiro duplo/triplo
+          if (typeof ShotEquipSystem !== 'undefined' && ShotEquipSystem.isEquippable(item.id)) {
+            ShotEquipSystem.equip(item.id);
+          }
         } else if (result === 'insufficient') {
           this._flashCard(item.id, 'error');
           this.showToast('Moedas insuficientes!', 'error');
@@ -197,9 +209,17 @@ const ShopUI = {
 
     // Botão
     if (maxed) {
-      els.btn.textContent = '✓ MÁXIMO';
-      els.btn.disabled    = true;
-      els.btn.className   = 'shop-buy-btn maxed-btn';
+      // Shot Equip: se é tiro duplo/triplo, mostra EQUIPAR/EQUIPADO em vez de MÁXIMO
+      if (typeof ShotEquipSystem !== 'undefined' && ShotEquipSystem.isEquippable(id)) {
+        var isEq = ShotEquipSystem.isEquipped(id);
+        els.btn.textContent = isEq ? '✓ EQUIPADO' : 'EQUIPAR';
+        els.btn.disabled    = isEq;
+        els.btn.className   = isEq ? 'shop-buy-btn maxed-btn' : 'shop-buy-btn';
+      } else {
+        els.btn.textContent = '✓ MÁXIMO';
+        els.btn.disabled    = true;
+        els.btn.className   = 'shop-buy-btn maxed-btn';
+      }
     } else {
       els.btn.textContent = `🪙 ${price}`;
       els.btn.disabled    = !canBuy;
