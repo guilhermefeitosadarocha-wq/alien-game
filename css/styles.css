@@ -2109,3 +2109,40 @@ body:has(#gameOverDOM.visible) #coinPanel { z-index: 951; }
   60%  { transform: scale(1.05); }
   100% { transform: scale(1); opacity: 1; }
 }
+/* ═══════════════════════════════════════════════════════════
+   MOBILE DASH BUTTON — só aparece em dispositivos touch
+   ═══════════════════════════════════════════════════════════ */
+#dashBtn {
+  display: none;
+}
+@media (hover: none) and (pointer: coarse) {
+  #dashBtn {
+    position: absolute;
+    bottom: calc(max(18px, env(safe-area-inset-bottom, 18px)) + clamp(76px, 20vmin, 96px) + 14px);
+    right: max(20px, env(safe-area-inset-right, 20px));
+    width: clamp(56px, 14vmin, 68px);
+    height: clamp(56px, 14vmin, 68px);
+    border-radius: 50%;
+    border: 2px solid rgba(0,200,255,0.45);
+    background: rgba(0,200,255,0.08);
+    color: rgba(0,200,255,0.80);
+    font-size: clamp(18px, 5vmin, 24px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: all;
+    cursor: pointer;
+    box-shadow: 0 0 16px rgba(0,200,255,0.18);
+    transition: background 0.08s, box-shadow 0.08s, transform 0.06s;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    z-index: 101;
+    font-family: 'Courier New', monospace;
+  }
+  #dashBtn:active {
+    background: rgba(0,200,255,0.28);
+    box-shadow: 0 0 28px rgba(0,200,255,0.45);
+    transform: scale(0.92);
+  }
+}
