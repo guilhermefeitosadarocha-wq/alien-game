@@ -2148,3 +2148,12 @@ body:has(#gameOverDOM.visible) #coinPanel { z-index: 951; }
 }
 /* Esconde o botão dash quando modo swipe está selecionado */
 #dashBtn.dash-hidden { display: none !important; }
+/* ═══════════════════════════════════════════════════════════
+   ESCONDER CONTROLES MOBILE NO DESKTOP
+   Usa a media query inversa de (hover: none) and (pointer: coarse).
+   Em dispositivos com mouse/trackpad (hover + pointer fino) =
+   desktop verdadeiro = esconde controles touch completamente.
+   ═══════════════════════════════════════════════════════════ */
+@media (hover: hover) and (pointer: fine) {
+  #mobileControls { display: none !important; }
+}
