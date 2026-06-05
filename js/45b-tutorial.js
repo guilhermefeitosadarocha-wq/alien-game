@@ -104,13 +104,13 @@ const TutorialSystem = {
       }
     },
     {
-      // Passo informativo: o Modo Âncora só existe no desktop por enquanto.
-      // Auto-avança após o tempo de leitura (sem pedir ação ao jogador).
-      icon: '⚓',
-      text: 'MODO ÂNCORA',
-      sub: 'Disponível no desktop (tecla F). No mobile, em breve!',
+      // Apresenta o botão 💥 (Pulse Aniquilador): toque pra eliminar
+      // todos os inimigos da tela. Auto-avança após tempo de leitura.
+      icon: '💥',
+      text: 'PULSO ANIQUILADOR',
+      sub: 'Toque no botão 💥 pra eliminar todos os inimigos',
       check: null,
-      autoDelay: 3500
+      autoDelay: 3800
     },
     {
       icon: '🚀',
