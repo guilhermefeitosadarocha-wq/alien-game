@@ -64,7 +64,7 @@ const SettingsUI = {
     this._setSlider('joystickSize',  'joystickSizeVal',  d.joystickSize,  'px');
     this._setSlider('mobileOpacity', 'mobileOpacityVal', d.mobileOpacity, '%');
     this._setRadioGroup('shootBtnPos', String(d.shootBtnBottom));
-
+    this._setRadioGroup('dashMode', d.dashMode || 'button');
     // Zoom da câmera
     this._setSlider('cameraZoom', 'cameraZoomVal', Math.round(CAMERA_ZOOM * 100), '%');
   },
@@ -264,6 +264,15 @@ const SettingsUI = {
     makeSlider('mobileOpacity', 'mobileOpacityVal', '%', v => {
       ControlSettings.data.mobileOpacity = v;
       MobileSettings.apply(ControlSettings.data);
+    });
+     document.getElementById('dashMode').addEventListener('click', e => {
+      const btn = e.target.closest('.settings-radio-btn');
+      if (!btn) return;
+      const val = btn.dataset.value;
+      this._setRadioGroup('dashMode', val);
+      ControlSettings.data.dashMode = val;
+      if (typeof DashModeSystem !== 'undefined') DashModeSystem.apply(val);
+      SaveSystem.save(ControlSettings.data);
     });
 
     document.getElementById('shootBtnPos').addEventListener('click', e => {

@@ -27,5 +27,6 @@ const SETTINGS_DEFAULTS = {
   joystickSize:    140,
   mobileOpacity:   100,
   shootBtnBottom:  30,
+  dashMode:        'button',
 };
 

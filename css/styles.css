@@ -2146,3 +2146,5 @@ body:has(#gameOverDOM.visible) #coinPanel { z-index: 951; }
     transform: scale(0.92);
   }
 }
+/* Esconde o botão dash quando modo swipe está selecionado */
+#dashBtn.dash-hidden { display: none !important; }
