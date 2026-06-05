@@ -50,8 +50,8 @@ const TutorialSystem = {
       text: 'DESVIE COM DASH',
       sub: 'Aperte SHIFT pra desviar rápido',
       check: function() {
-        return (typeof Input !== 'undefined' && Input.keys &&
-          (Input.keys['ShiftLeft'] || Input.keys['ShiftRight']));
+        // Universal: detecta o dash em si, independente da tecla/método
+        return (typeof DashSystem !== 'undefined' && DashSystem.active);
       }
     },
     {
@@ -79,6 +79,20 @@ const TutorialSystem = {
       sub: 'Toque no botão ◎ (lado direito)',
       check: function() {
         return (typeof Mobile !== 'undefined' && Mobile.shooting);
+      }
+    },
+    {
+      // Passo dinâmico: texto se adapta ao método de dash escolhido
+      icon: '⚡',
+      text: 'DESVIE COM DASH',
+      getSub: function() {
+        if (typeof DashModeSystem !== 'undefined' && DashModeSystem.isSwipe()) {
+          return 'Deslize o dedo em uma direção';
+        }
+        return 'Toque no botão ⚡ (acima do ◎)';
+      },
+      check: function() {
+        return (typeof DashSystem !== 'undefined' && DashSystem.active);
       }
     },
     {
@@ -194,9 +208,10 @@ const TutorialSystem = {
 
   _showStep() {
     var step = this._steps[this._currentStep];
-    this._iconEl.textContent = step.icon;
-    this._stepEl.textContent = step.text;
-    this._subEl.textContent = step.sub;
+    // Suporte a texto dinâmico (passos que se adaptam ao estado, ex: método de dash)
+    this._iconEl.textContent = (typeof step.getIcon === 'function') ? step.getIcon() : step.icon;
+    this._stepEl.textContent = (typeof step.getText === 'function') ? step.getText() : step.text;
+    this._subEl.textContent  = (typeof step.getSub  === 'function') ? step.getSub()  : step.sub;
     this._stepDone = false;
 
     var dots = this._progressEl.querySelectorAll('.tutorial-dot');

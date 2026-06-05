@@ -40,6 +40,11 @@ var DashModeSystem = {
     }
   },
 
+  // ── API pública: consulta do método ativo ──
+  getMethod: function() { return this._mode; },
+  isButton:  function() { return this._mode === 'button'; },
+  isSwipe:   function() { return this._mode === 'swipe'; },
+
   // Aciona o dash direcional direto pelo DashSystem (mesma função usada
   // pelo player update — preserva cooldown, energia, efeitos, som, etc.)
   _triggerDash: function(dirX, dirY) {
