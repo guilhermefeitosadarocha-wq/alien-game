@@ -55,6 +55,14 @@ const TutorialSystem = {
       }
     },
     {
+      icon: '⚓',
+      text: 'DEFENDA-SE COM ÂNCORA',
+      sub: 'Aperte F pra fixar a posição e mirar livremente',
+      check: function() {
+        return (typeof AnchorMode !== 'undefined' && AnchorMode.active);
+      }
+    },
+    {
       icon: '🚀',
       text: 'PRONTO! BOA SORTE!',
       sub: 'Elimine inimigos e sobreviva o máximo',
@@ -94,6 +102,15 @@ const TutorialSystem = {
       check: function() {
         return (typeof DashSystem !== 'undefined' && DashSystem.active);
       }
+    },
+    {
+      // Passo informativo: o Modo Âncora só existe no desktop por enquanto.
+      // Auto-avança após o tempo de leitura (sem pedir ação ao jogador).
+      icon: '⚓',
+      text: 'MODO ÂNCORA',
+      sub: 'Disponível no desktop (tecla F). No mobile, em breve!',
+      check: null,
+      autoDelay: 3500
     },
     {
       icon: '🚀',
@@ -235,9 +252,19 @@ const TutorialSystem = {
     var step = this._steps[this._currentStep];
     var self = this;
 
-    // Último passo (auto-dismiss)
+    // Passo auto-avançante (sem check function).
+    // Se for o último, finaliza; se for no meio, avança pro próximo.
     if (step.check === null) {
-      setTimeout(function() { self._finish(); }, 2500);
+      var delay = step.autoDelay || 2500;
+      setTimeout(function() {
+        self._currentStep++;
+        if (self._currentStep >= self._steps.length) {
+          self._finish();
+        } else {
+          self._showStep();
+          self._loop();
+        }
+      }, delay);
       return;
     }
 
