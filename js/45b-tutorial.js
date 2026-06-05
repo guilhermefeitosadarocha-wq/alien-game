@@ -116,6 +116,9 @@ const TutorialSystem = {
     return false;
   },
 
+  // ── API pública ──
+  isActive: function() { return !!this._active; },
+
   init() {
     try {
       if (localStorage.getItem(this._KEY) === '1') {

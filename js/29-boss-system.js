@@ -43,8 +43,14 @@ const BossSystem = {
 
   update(dt) {
     if (!this.boss) {
-      this._spawnTimer -= dt;
-      if (this._spawnTimer <= 0) this._spawnBoss();
+      // Bloqueia spawn do boss durante o tutorial
+      const tutorialActive = (typeof TutorialSystem !== 'undefined'
+        && typeof TutorialSystem.isActive === 'function'
+        && TutorialSystem.isActive());
+      if (!tutorialActive) {
+        this._spawnTimer -= dt;
+        if (this._spawnTimer <= 0) this._spawnBoss();
+      }
       return;
     }
     const boss = this.boss;

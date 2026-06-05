@@ -26,6 +26,11 @@ const Enemies = {
 
   update(dt) {
     // Spawn — interval modified by DifficultySystem
+    // Bloqueia spawn enquanto o tutorial estiver ativo
+    const tutorialActive = (typeof TutorialSystem !== 'undefined'
+      && typeof TutorialSystem.isActive === 'function'
+      && TutorialSystem.isActive());
+    if (!tutorialActive) {
     this.spawnTimer -= dt;
     if (this.spawnTimer <= 0) {
       const pos  = this._randomEdge();
@@ -53,6 +58,7 @@ const Enemies = {
         active: true,
       });
       this.spawnTimer = this._spawnInterval() * DifficultySystem.spawnIntervalMult();
+    }
     }
 
     const baseSpeed = this._speed() * DifficultySystem.enemySpeedMult() * (CONFIG._modFastEnemies ? 1.5 : 1);
