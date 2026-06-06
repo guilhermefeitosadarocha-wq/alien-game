@@ -47,6 +47,7 @@ MatchModifiers.init();
 MatchModifiersClose.init();
 MultiplayerSystem.init();
 MPModeSelect.init();
+OnlineMultiplayer.init();
 AnchorMode.init();
 GameOverDOM.init();
 TutorialSystem.init();
