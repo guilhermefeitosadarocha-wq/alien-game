@@ -256,6 +256,42 @@
   .hud #btnCopiar:hover  { background: rgba(0,255,150,0.20); box-shadow: 0 0 10px rgba(0,255,150,0.30); }
   .hud #btnCopiar:active { transform: scale(0.95); }
   .hud #btnCopiar.copiado { background: rgba(0,255,150,0.30); color: #00ff99; border-color: #00ff99; }
+/* ─── WAVE HUD + ANÚNCIO ─── */
+  .hud .wave {
+    color: #00eeff;
+    font-weight: bold;
+    text-shadow: 0 0 6px rgba(0,238,255,0.6);
+  }
+  .wave-announce {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0;
+    transform: scale(0.7);
+    transition: opacity 0.35s ease-out, transform 0.35s ease-out;
+  }
+  .wave-announce.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .wave-announce-label {
+    font-size: 22px;
+    color: rgba(0,200,255,0.85);
+    letter-spacing: 0.3em;
+    text-shadow: 0 0 16px rgba(0,200,255,0.7);
+    margin-bottom: 8px;
+  }
+  .wave-announce-number {
+    font-size: 96px;
+    font-weight: bold;
+    color: #00eeff;
+    text-shadow: 0 0 24px rgba(0,238,255,0.9),
+                 0 0 56px rgba(0,238,255,0.5);
+    letter-spacing: 0.05em;
+    font-family: 'Courier New', monospace;
+  }
 </style>
 </head>
 <body>
@@ -282,6 +318,7 @@
     <span>Sala: <b id="codigoSala">—</b></span>
     <button id="btnCopiar" title="Copiar código" type="button">📋 COPIAR LINK</button>
     <span id="papel" class="role host">HOST</span>
+    <span class="wave">WAVE: <span id="waveV">1</span></span>
     <span class="score">SCORE: <span id="scoreV">0</span></span>
     <span class="lives" id="vidasInfo">P1:♥♥♥</span>
     <button id="btnSair" class="btnSair">SAIR</button>
@@ -300,6 +337,12 @@
     que valida e remove o inimigo (Opção A). Score é do host (transmitido). Game over quando
     os dois ficam sem vida.
   </div>
+</div>
+
+<!-- ANÚNCIO DE WAVE -->
+<div id="waveAnnounce" class="wave-announce">
+  <div class="wave-announce-label">WAVE</div>
+  <div class="wave-announce-number" id="waveAnnounceNum">1</div>
 </div>
 
 <!-- TELA DE GAME OVER -->
@@ -352,6 +395,15 @@ const SPAWN_INTERVAL_MIN = 0.6;
 const SPAWN_RAMP = 0.02;          // diminui SPAWN_INTERVAL ao longo do tempo
 const PLAYER_LIVES = 3;
 const INVINCIBLE_TIME = 1.2;
+
+// ── Wave system ─────────────────────────────────────
+const WAVE_BASE_COUNT   = 5;
+const WAVE_COUNT_INC    = 3;
+const WAVE_SPAWN_BASE   = 1.0;
+const WAVE_SPAWN_MIN    = 0.35;
+const WAVE_SPAWN_DEC    = 0.08;
+const WAVE_INTERMISSION = 3.0;
+const WAVE_MAX_ALIVE    = 25;
 
 const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -438,10 +490,16 @@ const SFX = {
       SFX._noise(t, 0.50, 0.32, 80);
       SFX._osc('sine', 55, t + 0.85, 0.42, 0.70, 0.05);
     },
-    ui_click() {
+   ui_click() {
       const t = SFX._ctx.currentTime;
       SFX._osc('triangle', 1200, t,        0.06, 0.14, 0.003);
       SFX._osc('sine',     1800, t + 0.02, 0.05, 0.10, 0.003);
+    },
+    wave_start() {
+      const t = SFX._ctx.currentTime;
+      SFX._sweep('square',   220, 660, t,        0.18, 0.20);
+      SFX._sweep('sawtooth', 440, 880, t + 0.05, 0.20, 0.16);
+      SFX._osc('sine', 1100, t + 0.15, 0.15, 0.18, 0.005);
     },
   },
   play(name) {
@@ -561,6 +619,21 @@ let score = 0;
 let timeSinceSpawn = 0;
 let elapsedTime = 0;
 
+// ── Wave state ─────────────────────────────────────
+let currentWave          = 1;
+let waveEnemiesRemaining = WAVE_BASE_COUNT;
+let wavePhase            = 'spawning'; // 'spawning' | 'fighting' | 'intermission'
+let intermissionTimer    = 0;
+
+function announceWave(n) {
+  const el = document.getElementById('waveAnnounce');
+  if (!el) return;
+  document.getElementById('waveAnnounceNum').textContent = n;
+  el.classList.add('visible');
+  setTimeout(() => el.classList.remove('visible'), 1100);
+  SFX.play('wave_start');
+}
+
 // Stats
 let msgsEnviadas = 0, msgsRecebidas = 0;
 
@@ -618,6 +691,12 @@ function resetEstado() {
   timeSinceSpawn = 0;
   elapsedTime = 0;
   msgsEnviadas = 0; msgsRecebidas = 0;
+  // Wave reset
+  currentWave = 1;
+  waveEnemiesRemaining = WAVE_BASE_COUNT;
+  wavePhase = 'spawning';
+  intermissionTimer = 0;
+  announceWave(currentWave);
 }
 
 function sairDaSala() {
@@ -729,6 +808,8 @@ function registrarHandlers(c) {
     msgsRecebidas++;
     if (SOU_HOST) return; // host não escuta o próprio estado
     score = payload.score;
+    // wave atual (HUD)
+    if (payload.wave != null) currentWave = payload.wave;
     // vidas dos dois
     const _vidasAntes = eu.vidas;
     eu.vidas       = payload.vidas[MEU_ID] != null ? payload.vidas[MEU_ID] : eu.vidas;
@@ -764,6 +845,16 @@ function registrarHandlers(c) {
     msgsRecebidas++;
     if (payload.from === MEU_ID) return; // ignora meu próprio eco
     reiniciarPartida();
+  });
+
+  // Anúncio de nova wave (host envia, convidado mostra)
+  c.on('broadcast', { event: 'waveAnnounce' }, ({ payload }) => {
+    msgsRecebidas++;
+    if (SOU_HOST) return;
+    if (payload.wave != null) {
+      currentWave = payload.wave;
+      announceWave(currentWave);
+    }
   });
 }
 
@@ -881,6 +972,12 @@ function reiniciarPartida() {
   elapsedTime = 0;
   gameAcabou = false;
   gameoverEl.classList.add('hide');
+  // Wave reset
+  currentWave = 1;
+  waveEnemiesRemaining = WAVE_BASE_COUNT;
+  wavePhase = 'spawning';
+  intermissionTimer = 0;
+  announceWave(currentWave);
 }
 
 document.getElementById('btnJogarDeNovo').addEventListener('click', () => {
@@ -1021,12 +1118,35 @@ function loop(agora) {
 
   // ── 4) HOST: simular inimigos (perseguir mais perto), spawn, dano nas naves ──
   if (SOU_HOST && !gameAcabou) {
-    // Spawn
-    const interval = Math.max(SPAWN_INTERVAL_MIN, SPAWN_INTERVAL - elapsedTime * SPAWN_RAMP);
-    timeSinceSpawn += dt;
-    if (timeSinceSpawn >= interval && inimigos.size < 18) {
-      timeSinceSpawn = 0;
-      spawnInimigo();
+    // Wave-based spawn (host autoritativo)
+    if (wavePhase === 'spawning') {
+      const interval = Math.max(WAVE_SPAWN_MIN, WAVE_SPAWN_BASE - (currentWave - 1) * WAVE_SPAWN_DEC);
+      timeSinceSpawn += dt;
+      if (timeSinceSpawn >= interval && waveEnemiesRemaining > 0 && inimigos.size < WAVE_MAX_ALIVE) {
+        timeSinceSpawn = 0;
+        spawnInimigo();
+        waveEnemiesRemaining--;
+        if (waveEnemiesRemaining === 0) wavePhase = 'fighting';
+      }
+    } else if (wavePhase === 'fighting') {
+      // Espera todos os inimigos morrerem
+      if (inimigos.size === 0) {
+        wavePhase = 'intermission';
+        intermissionTimer = WAVE_INTERMISSION;
+      }
+    } else if (wavePhase === 'intermission') {
+      intermissionTimer -= dt;
+      if (intermissionTimer <= 0) {
+        currentWave++;
+        waveEnemiesRemaining = WAVE_BASE_COUNT + (currentWave - 1) * WAVE_COUNT_INC;
+        timeSinceSpawn = 0;
+        wavePhase = 'spawning';
+        announceWave(currentWave);
+        if (canal) {
+          canal.send({ type: 'broadcast', event: 'waveAnnounce', payload: { wave: currentWave } });
+          msgsEnviadas++;
+        }
+      }
     }
     // Movimento (perseguir alvo mais perto)
     for (const [eid, inim] of inimigos) {
@@ -1059,9 +1179,9 @@ function loop(agora) {
       const vidas = {};
       vidas[MEU_ID] = eu.vidas;
       if (outraNave.ativa && outraNave.id) vidas[outraNave.id] = outraNave.vidas;
-      canal.send({
+     canal.send({
         type: 'broadcast', event: 'state',
-        payload: { score, vidas, enemies: enemiesArr }
+        payload: { score, vidas, enemies: enemiesArr, wave: currentWave }
       });
       msgsEnviadas++;
       proximoState = agora + 1000/STATE_SEND_HZ;
@@ -1144,8 +1264,9 @@ function loop(agora) {
   }
   document.getElementById('vidasInfo').textContent = txt;
 
+ document.getElementById('waveV').textContent = currentWave;
   document.getElementById('stats').textContent =
-    `${SOU_HOST?'HOST':'CONVIDADO'}  ·  inimigos: ${inimigos.size}  ·  balas: ${balas.length}  ·  ` +
+    `${SOU_HOST?'HOST':'CONVIDADO'}  ·  wave: ${currentWave}  ·  inimigos: ${inimigos.size}  ·  balas: ${balas.length}  ·  ` +
     `env: ${msgsEnviadas}  ·  rec: ${msgsRecebidas}`;
 
   requestAnimationFrame(loop);
