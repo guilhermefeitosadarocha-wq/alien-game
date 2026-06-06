@@ -292,6 +292,88 @@
     letter-spacing: 0.05em;
     font-family: 'Courier New', monospace;
   }
+/* ─── BADGE DE CONEXÃO ─── */
+  .hud .conn {
+    font-size: 14px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    transition: color 0.2s, text-shadow 0.2s;
+  }
+  .conn-online { color: #00ff99; text-shadow: 0 0 4px rgba(0,255,150,0.7); }
+  .conn-warn   { color: #ffcc00; text-shadow: 0 0 4px rgba(255,200,0,0.7); animation: connPulse 0.8s ease-in-out infinite; }
+  .conn-off    { color: #ff4466; text-shadow: 0 0 4px rgba(255,60,90,0.7); }
+  .conn-solo   { color: rgba(0,200,255,0.3); text-shadow: none; }
+  @keyframes connPulse { 50% { opacity: 0.5; } }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed;
+    top: 60px; left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    background: rgba(0, 15, 30, 0.95);
+    border: 1.5px solid rgba(0, 200, 255, 0.55);
+    color: #00c8ff;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    letter-spacing: 0.10em;
+    padding: 10px 22px;
+    border-radius: 8px;
+    z-index: 90;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: 0 0 16px rgba(0, 200, 255, 0.25);
+    transition: opacity 0.25s, transform 0.25s;
+    white-space: nowrap;
+  }
+  .toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ─── BANNER DE HOST CAÍDO ─── */
+  .dc-banner {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(180deg, rgba(40,0,0,0.95), rgba(20,0,0,0.95));
+    border: 2px solid #ff4466;
+    border-radius: 14px;
+    padding: 28px 44px;
+    text-align: center;
+    z-index: 80;
+    box-shadow: 0 0 28px rgba(255,60,90,0.4);
+    animation: dcBannerIn 0.4s ease-out;
+    min-width: 280px;
+  }
+  .dc-banner.hide { display: none; }
+  @keyframes dcBannerIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  .dc-icon {
+    font-size: 38px;
+    margin-bottom: 8px;
+  }
+  .dc-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #ff4466;
+    letter-spacing: 0.20em;
+    text-shadow: 0 0 10px rgba(255,60,90,0.6);
+    margin-bottom: 10px;
+  }
+  .dc-sub {
+    font-size: 12px;
+    color: rgba(255, 200, 200, 0.7);
+    letter-spacing: 0.10em;
+  }
+  .dc-sub span {
+    color: #ffcc00;
+    font-weight: bold;
+    font-size: 15px;
+  }
 </style>
 </head>
 <body>
@@ -317,7 +399,8 @@
   <div class="hud">
     <span>Sala: <b id="codigoSala">—</b></span>
     <button id="btnCopiar" title="Copiar código" type="button">📋 COPIAR LINK</button>
-    <span id="papel" class="role host">HOST</span>
+    <<span id="papel" class="role host">HOST</span>
+    <span id="connStatus" class="conn conn-solo" title="Conexão">●</span>
     <span class="wave">WAVE: <span id="waveV">1</span></span>
     <span class="score">SCORE: <span id="scoreV">0</span></span>
     <span class="lives" id="vidasInfo">P1:♥♥♥</span>
@@ -404,6 +487,11 @@ const WAVE_SPAWN_MIN    = 0.35;
 const WAVE_SPAWN_DEC    = 0.08;
 const WAVE_INTERMISSION = 3.0;
 const WAVE_MAX_ALIVE    = 25;
+
+// ── Disconnection detection ─────────────────────────
+const PING_INTERVAL     = 2.0;   // s entre pings
+const PING_TIMEOUT      = 5.0;   // s sem ping → marca offline
+const AUTO_RETURN_DELAY = 5.0;   // s até convidado voltar ao lobby
 
 const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -634,6 +722,80 @@ function announceWave(n) {
   SFX.play('wave_start');
 }
 
+// ── Disconnection state ─────────────────────────────
+let lastPingFromOther = 0;
+let pingIntervalId    = null;
+let outraNaveOffline  = false;
+let autoReturnTimer   = 0;
+let toastTimer        = null;
+
+function mostrarToast(texto) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = texto;
+  el.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('visible'), 3000);
+}
+
+function iniciarHeartbeat() {
+  pararHeartbeat();
+  pingIntervalId = setInterval(() => {
+    if (canal && conectado) {
+      canal.send({ type: 'broadcast', event: 'ping', payload: { from: MEU_ID } });
+      msgsEnviadas++;
+    }
+  }, PING_INTERVAL * 1000);
+}
+
+function pararHeartbeat() {
+  if (pingIntervalId) { clearInterval(pingIntervalId); pingIntervalId = null; }
+}
+
+function handleOutraNaveOffline() {
+  outraNave.ativa = false;
+  outraNave.buffer = [];
+  if (SOU_HOST) {
+    mostrarToast('Convidado desconectou. Continuando solo.');
+    SFX.play('lose_life');
+  } else {
+    // Host caiu — convidado precisa voltar ao lobby
+    autoReturnTimer = AUTO_RETURN_DELAY;
+    const banner = document.getElementById('dcBanner');
+    if (banner) banner.classList.remove('hide');
+    SFX.play('lose_life');
+  }
+}
+
+function handleOutraNaveOnline() {
+  outraNaveOffline = false;
+  autoReturnTimer = 0;
+  const banner = document.getElementById('dcBanner');
+  if (banner) banner.classList.add('hide');
+  mostrarToast('Reconectado!');
+}
+
+function atualizarConnUI() {
+  const el = document.getElementById('connStatus');
+  if (!el) return;
+  if (!outraNave.ativa) {
+    el.className = 'conn conn-solo';
+    el.title = 'Sozinho na sala';
+    return;
+  }
+  const elapsed = performance.now()/1000 - lastPingFromOther;
+  if (elapsed < 2.5) {
+    el.className = 'conn conn-online';
+    el.title = 'Conexão estável';
+  } else if (elapsed < PING_TIMEOUT) {
+    el.className = 'conn conn-warn';
+    el.title = 'Conexão instável';
+  } else {
+    el.className = 'conn conn-off';
+    el.title = 'Outro jogador offline';
+  }
+}
+
 // Stats
 let msgsEnviadas = 0, msgsRecebidas = 0;
 
@@ -671,6 +833,8 @@ function iniciarSala(codigo, comoHost) {
       if (!SOU_HOST) {
         canal.send({ type: 'broadcast', event: 'hello', payload: { id: MEU_ID } });
       }
+      iniciarHeartbeat();
+      lastPingFromOther = performance.now() / 1000; // baseline
     } else if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT') {
       mostrarErro('Erro de conexão com a sala.');
       sairDaSala();
@@ -700,6 +864,14 @@ function resetEstado() {
 }
 
 function sairDaSala() {
+  // Limpa estado de desconexão antes de tudo
+  pararHeartbeat();
+  outraNaveOffline = false;
+  autoReturnTimer = 0;
+  lastPingFromOther = 0;
+  const _b = document.getElementById('dcBanner');
+  if (_b) _b.classList.add('hide');
+
   if (canal) {
     try { canal.send({ type: 'broadcast', event: 'sai', payload: { id: MEU_ID } }); } catch (e) {}
     supa.removeChannel(canal);
@@ -759,16 +931,26 @@ function registrarHandlers(c) {
     if (SOU_HOST) {
       outraNave.ativa = true;
       outraNave.id = payload.id;
+      lastPingFromOther = performance.now() / 1000;
+      if (outraNaveOffline) handleOutraNaveOnline();
     }
   });
 
-  // Saída de sala
+  // Saída de sala (explícita: botão SAIR ou aba fechada)
   c.on('broadcast', { event: 'sai' }, ({ payload }) => {
     msgsRecebidas++;
     if (outraNave.id === payload.id) {
-      outraNave.ativa = false;
-      outraNave.buffer = [];
+      outraNaveOffline = true;
+      handleOutraNaveOffline();
     }
+  });
+
+  // Heartbeat (detecta desconexão silenciosa via timeout)
+  c.on('broadcast', { event: 'ping' }, ({ payload }) => {
+    msgsRecebidas++;
+    if (payload.from === MEU_ID) return;
+    lastPingFromOther = performance.now() / 1000;
+    if (outraNaveOffline) handleOutraNaveOnline();
   });
 
   // Tiro: vindo do outro player, adiciona localmente
@@ -1254,6 +1436,26 @@ function loop(agora) {
       MEU_ID, true, eu.invincivel > 0);
   }
 
+  /// ── MONITORAMENTO DE CONEXÃO ──
+  if (canal && conectado && outraNave.ativa && !outraNaveOffline) {
+    const elapsedSincePing = performance.now()/1000 - lastPingFromOther;
+    if (elapsedSincePing > PING_TIMEOUT) {
+      outraNaveOffline = true;
+      handleOutraNaveOffline();
+    }
+  }
+  // Countdown de auto-return (convidado quando host caiu)
+  if (autoReturnTimer > 0) {
+    autoReturnTimer -= dt;
+    const cdEl = document.getElementById('dcCountdown');
+    if (cdEl) cdEl.textContent = Math.max(0, Math.ceil(autoReturnTimer));
+    if (autoReturnTimer <= 0) {
+      autoReturnTimer = 0;
+      sairDaSala();
+    }
+  }
+  atualizarConnUI();
+
   // ── 7) HUD ──
   document.getElementById('scoreV').textContent = score;
   const corP1 = '♥'.repeat(Math.max(0, eu.vidas)) + '·'.repeat(Math.max(0, PLAYER_LIVES - eu.vidas));
@@ -1272,6 +1474,16 @@ function loop(agora) {
   requestAnimationFrame(loop);
 }
 </script>
+
+<!-- Toast (mensagens transitórias) -->
+<div id="toast" class="toast"></div>
+
+<!-- Banner: host caiu, convidado vai voltar ao lobby -->
+<div id="dcBanner" class="dc-banner hide">
+  <div class="dc-icon">⚠</div>
+  <div class="dc-title">HOST DESCONECTOU</div>
+  <div class="dc-sub">Voltando ao lobby em <span id="dcCountdown">5</span>s...</div>
+</div>
 
 </body>
 </html>
