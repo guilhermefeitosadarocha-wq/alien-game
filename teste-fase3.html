@@ -106,21 +106,141 @@
     line-height: 1.6; max-width: 600px;
   }
   .info strong { color: #00c8ff; }
+ /* ─── GAME OVER (tela polida) ─── */
   .gameover {
     position: fixed; inset: 0;
-    background: rgba(2,6,14,0.92);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
+    background: rgba(2, 6, 14, 0.88);
+    display: flex; align-items: center; justify-content: center;
     z-index: 100;
+    animation: goFadeIn 0.35s ease-out;
   }
-  .gameover h2 {
-    font-size: 48px; color: #ff4466;
-    text-shadow: 0 0 24px rgba(255,60,90,0.6);
-    letter-spacing: 0.10em;
-    margin-bottom: 8px;
+  @keyframes goFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .go-panel {
+    position: relative;
+    background: linear-gradient(180deg, rgba(0,15,30,0.95), rgba(0,8,18,0.95));
+    border: 2px solid rgba(0,200,255,0.5);
+    border-radius: 14px;
+    padding: 36px 44px 28px;
+    min-width: 360px;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 0 32px rgba(0,200,255,0.25),
+                inset 0 0 24px rgba(0,200,255,0.06);
+    animation: goPanelIn 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .gameover .scoreFinal {
-    color: #00c8ff; font-size: 14px; margin-bottom: 24px;
+  @keyframes goPanelIn {
+    from { opacity: 0; transform: scale(0.92) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* Cantos decorativos estilo arena */
+  .go-corner {
+    position: absolute;
+    width: 22px; height: 22px;
+    border: 2px solid #00eeff;
+    box-shadow: 0 0 8px rgba(0,238,255,0.6);
+    pointer-events: none;
+  }
+  .go-corner-tl { top: -2px;    left: -2px;    border-right: none;  border-bottom: none; border-radius: 14px 0 0 0; }
+  .go-corner-tr { top: -2px;    right: -2px;   border-left: none;   border-bottom: none; border-radius: 0 14px 0 0; }
+  .go-corner-bl { bottom: -2px; left: -2px;    border-right: none;  border-top: none;    border-radius: 0 0 0 14px; }
+  .go-corner-br { bottom: -2px; right: -2px;   border-left: none;   border-top: none;    border-radius: 0 0 14px 0; }
+
+  /* Título com pulse */
+  .go-title {
+    font-size: 54px;
+    font-weight: bold;
+    color: #ff4466;
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+    text-shadow: 0 0 14px rgba(255,60,90,0.7),
+                 0 0 28px rgba(255,60,90,0.4);
+    animation: goTitlePulse 1.8s ease-in-out infinite;
+  }
+  @keyframes goTitlePulse {
+    0%, 100% { text-shadow: 0 0 14px rgba(255,60,90,0.7), 0 0 28px rgba(255,60,90,0.4); }
+    50%      { text-shadow: 0 0 18px rgba(255,60,90,0.9), 0 0 40px rgba(255,60,90,0.6); }
+  }
+
+  .go-subtitle {
+    font-size: 11px;
+    color: rgba(0,200,255,0.55);
+    letter-spacing: 0.22em;
+    margin-bottom: 28px;
+    text-transform: uppercase;
+  }
+
+  /* Cards de stats */
+  .go-stats {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+  .go-stat {
+    background: rgba(0,200,255,0.06);
+    border: 1px solid rgba(0,200,255,0.25);
+    border-radius: 8px;
+    padding: 12px 22px;
+    min-width: 116px;
+  }
+  .go-stat-label {
+    font-size: 10px;
+    color: rgba(0,200,255,0.6);
+    letter-spacing: 0.20em;
+    margin-bottom: 4px;
+  }
+  .go-stat-value {
+    font-size: 26px;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+  }
+  .go-stat-score {
+    color: #ffdd00;
+    text-shadow: 0 0 10px rgba(255,221,0,0.5);
+  }
+  .go-stat-time {
+    color: #00ff88;
+    text-shadow: 0 0 10px rgba(0,255,136,0.5);
+  }
+
+  /* Botões */
+  .go-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  .go-btn {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.12em;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+    background: transparent;
+  }
+  .go-btn:active { transform: scale(0.97); }
+  .go-btn-primary {
+    background: rgba(0,255,136,0.12);
+    border: 1.5px solid rgba(0,255,136,0.55);
+    color: #00ff88;
+  }
+  .go-btn-primary:hover {
+    background: rgba(0,255,136,0.22);
+    box-shadow: 0 0 16px rgba(0,255,136,0.35);
+  }
+  .go-btn-secondary {
+    background: rgba(255,80,200,0.08);
+    border: 1.5px solid rgba(255,80,200,0.50);
+    color: #ff44cc;
+  }
+  .go-btn-secondary:hover {
+    background: rgba(255,80,200,0.18);
+    box-shadow: 0 0 14px rgba(255,80,200,0.32);
   }
   /* botão copiar código */
   .hud #btnCopiar {
@@ -184,9 +304,28 @@
 
 <!-- TELA DE GAME OVER -->
 <div id="gameoverScreen" class="gameover hide">
-  <h2>GAME OVER</h2>
-  <div class="scoreFinal">Score final: <span id="goScore">0</span></div>
-  <button class="btn" id="btnVoltar">VOLTAR AO LOBBY</button>
+  <div class="go-panel">
+    <span class="go-corner go-corner-tl"></span>
+    <span class="go-corner go-corner-tr"></span>
+    <span class="go-corner go-corner-bl"></span>
+    <span class="go-corner go-corner-br"></span>
+    <div class="go-title">GAME OVER</div>
+    <div class="go-subtitle">A horda venceu desta vez</div>
+    <div class="go-stats">
+      <div class="go-stat">
+        <div class="go-stat-label">SCORE</div>
+        <div class="go-stat-value go-stat-score" id="goScore">0</div>
+      </div>
+      <div class="go-stat">
+        <div class="go-stat-label">TEMPO</div>
+        <div class="go-stat-value go-stat-time" id="goTime">00:00</div>
+      </div>
+    </div>
+    <div class="go-buttons">
+      <button id="btnJogarDeNovo" class="go-btn go-btn-primary">▶ JOGAR DE NOVO</button>
+      <button id="btnVoltar" class="go-btn go-btn-secondary">VOLTAR AO LOBBY</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -612,13 +751,19 @@ function registrarHandlers(c) {
     // remove inimigos que sumiram (morreram)
     for (const [id] of inimigos) if (!recebidosIds.has(id)) inimigos.delete(id);
   });
-
-  // Game over (host envia)
+// Game over (host envia)
   c.on('broadcast', { event: 'gameover' }, ({ payload }) => {
     msgsRecebidas++;
     if (SOU_HOST) return;
     score = payload.score;
     mostrarGameOver();
+  });
+
+  // Pedido de reinício (qualquer lado pode pedir, sincroniza os dois)
+  c.on('broadcast', { event: 'restart' }, ({ payload }) => {
+    msgsRecebidas++;
+    if (payload.from === MEU_ID) return; // ignora meu próprio eco
+    reiniciarPartida();
   });
 }
 
@@ -714,9 +859,38 @@ function triggerGameOver() {
 function mostrarGameOver() {
   gameAcabou = true;
   document.getElementById('goScore').textContent = score;
+  const _m = Math.floor(elapsedTime / 60);
+  const _s = Math.floor(elapsedTime % 60);
+  document.getElementById('goTime').textContent =
+    String(_m).padStart(2,'0') + ':' + String(_s).padStart(2,'0');
   gameoverEl.classList.remove('hide');
   SFX.play('game_over');
 }
+
+function reiniciarPartida() {
+  // Reseta tudo MAS mantém conexão (outraNave.ativa segue como está)
+  eu.x = ARENA_W/2; eu.y = ARENA_H/2; eu.angle = 0;
+  eu.fireTimer = 0; eu.vidas = PLAYER_LIVES; eu.invincivel = 0;
+  outraNave.vidas = PLAYER_LIVES;
+  outraNave._inv = 0;
+  outraNave.buffer = [];
+  balas.length = 0;
+  inimigos.clear();
+  score = 0;
+  timeSinceSpawn = 0;
+  elapsedTime = 0;
+  gameAcabou = false;
+  gameoverEl.classList.add('hide');
+}
+
+document.getElementById('btnJogarDeNovo').addEventListener('click', () => {
+  reiniciarPartida();
+  if (canal) {
+    canal.send({ type: 'broadcast', event: 'restart', payload: { from: MEU_ID } });
+    msgsEnviadas++;
+  }
+  SFX.play('ui_click');
+});
 
 // ═══════════════════════════════════════════════════════════════
 //  DESENHO
