@@ -1,16 +1,17 @@
 // ═══════════════════════════════════════════════════════════
-//  ONLINE MULTIPLAYER — Fase 1.3: lobby com conexão Supabase
+//  ONLINE MULTIPLAYER — Fase 1.4: jogadores na arena
 //
-//  Lobby aceita CRIAR SALA / ENTRAR / link de convite (?sala=).
-//  Detecta quando o outro jogador entra ou sai. Game loop e
-//  player rendering vêm no sub-passo 1.4.
+//  Quando active=true, Game.update/draw chamam o loop daqui:
+//  Player movement, balas locais, broadcast/interp da nave
+//  remota, balas remotas. Arena = mesma do single player.
+//  Sem inimigos/bosses/itens — só dois triângulos atirando.
 // ═══════════════════════════════════════════════════════════
 
 const ONLINE_SUPABASE_URL = 'https://xasgwdhartnrivgrzvri.supabase.co';
 const ONLINE_SUPABASE_KEY = 'sb_publishable_L-_YjiayMOqtrX324DQy9w_JZbyZw-H';
 
 function _onlineGerarCodigo() {
-  const alfa = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem ambíguos (I, O, 0, 1)
+  const alfa = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let s = '';
   for (let i = 0; i < 4; i++) s += alfa[Math.floor(Math.random() * alfa.length)];
   return 'NEON-' + s;
@@ -24,72 +25,94 @@ const OnlineMultiplayer = {
   // ── Estado público ─────────────────────────────────────
   active:    false,
   role:      null,        // 'host' | 'guest'
-  codigo:    null,        // código da sala
-  conectado: false,       // canal Supabase subscribed
-  inRoom:    false,       // true quando estamos numa sala (room view do lobby)
+  codigo:    null,
+  conectado: false,
+  inRoom:    false,
   meuId:     'P' + Math.random().toString(36).slice(2, 5).toUpperCase(),
 
   // ── Estado interno ─────────────────────────────────────
-  _supa:    null,
-  _canal:   null,
-  _outroId: null,         // id do outro jogador quando conectado
+  _supa:           null,
+  _canal:          null,
+  _outroId:        null,
+  _outraNave:      null,           // { ativa, buffer:[{x,y,a,t}] }
+  _remoteBullets:  [],
+  _posTimer:       0,
+  _origBulletSpawn: null,
 
   // ── Inicialização ──────────────────────────────────────
   init() {
-    console.log('[OnlineMultiplayer] módulo carregado (Fase 1.3)');
+    console.log('[OnlineMultiplayer] módulo carregado (Fase 1.4)');
 
-    // Cliente Supabase compartilhado
     try {
       this._supa = supabase.createClient(ONLINE_SUPABASE_URL, ONLINE_SUPABASE_KEY);
     } catch (e) {
       console.error('[OnlineMultiplayer] Supabase init falhou:', e);
     }
 
-    // ── Botão ONLINE do menu → abre o lobby
-    const btn = document.getElementById('onlineBtn');
-    if (btn) btn.addEventListener('click', () => this.showLobby());
+    this._wireButtons();
+    this._hookBulletSpawn();
 
-    // ── Botão X do lobby → se tá numa sala, sai; depois fecha
-    const close = document.getElementById('onlineCloseBtn');
-    if (close) close.addEventListener('click', () => {
-      if (this.inRoom) this.sairDaSala();
-      this.hideLobby();
-    });
-
-    // ── Botão CRIAR SALA
-    const criarBtn = document.getElementById('onlineCriarBtn');
-    if (criarBtn) criarBtn.addEventListener('click', () => this.criarSala());
-
-    // ── Botão ENTRAR (com código digitado)
-    const entrarBtn = document.getElementById('onlineEntrarBtn');
-    if (entrarBtn) entrarBtn.addEventListener('click', () => {
-      const input = document.getElementById('onlineCodigoInput');
-      if (input) this.entrarSala(input.value);
-    });
-
-    // ── Enter no campo → ENTRAR
-    const input = document.getElementById('onlineCodigoInput');
-    if (input) input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') this.entrarSala(input.value);
-    });
-
-    // ── Botão COPIAR LINK
-    const copiarBtn = document.getElementById('onlineCopiarBtn');
-    if (copiarBtn) copiarBtn.addEventListener('click', () => this._copiarLink());
-
-    // ── Botão SAIR DA SALA (volta pro main view do lobby)
-    const sairBtn = document.getElementById('onlineSairLobbyBtn');
-    if (sairBtn) sairBtn.addEventListener('click', () => this.sairDaSala());
-
-    // ── Avisa o outro lado quando a aba fechar
     window.addEventListener('beforeunload', () => {
       if (this._canal) try {
         this._canal.send({ type: 'broadcast', event: 'sai', payload: { id: this.meuId } });
       } catch (e) {}
     });
 
-    // ── Auto-join via ?sala=CODE
     this._autoJoinFromURL();
+  },
+
+  _wireButtons() {
+    const _g = id => document.getElementById(id);
+
+    const btn = _g('onlineBtn');
+    if (btn) btn.addEventListener('click', () => this.showLobby());
+
+    const close = _g('onlineCloseBtn');
+    if (close) close.addEventListener('click', () => {
+      if (this.inRoom) this.sairDaSala();
+      this.hideLobby();
+    });
+
+    const criarBtn = _g('onlineCriarBtn');
+    if (criarBtn) criarBtn.addEventListener('click', () => this.criarSala());
+
+    const entrarBtn = _g('onlineEntrarBtn');
+    if (entrarBtn) entrarBtn.addEventListener('click', () => {
+      const input = _g('onlineCodigoInput');
+      if (input) this.entrarSala(input.value);
+    });
+
+    const input = _g('onlineCodigoInput');
+    if (input) input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') this.entrarSala(input.value);
+    });
+
+    const copiarBtn = _g('onlineCopiarBtn');
+    if (copiarBtn) copiarBtn.addEventListener('click', () => this._copiarLink());
+
+    const sairBtn = _g('onlineSairLobbyBtn');
+    if (sairBtn) sairBtn.addEventListener('click', () => this.sairDaSala());
+
+    // INICIAR PARTIDA (host only, visível quando guest conectado)
+    const iniciarBtn = _g('onlineIniciarBtn');
+    if (iniciarBtn) iniciarBtn.addEventListener('click', () => this._hostStartMatch());
+  },
+
+  _hookBulletSpawn() {
+    // Wrapper em Bullets.spawn pra broadcastar tiro quando em modo online
+    this._origBulletSpawn = Bullets.spawn.bind(Bullets);
+    const self = this;
+    Bullets.spawn = function(x, y, angle) {
+      self._origBulletSpawn(x, y, angle);
+      if (self.active && self._canal && self.conectado) {
+        try {
+          self._canal.send({
+            type: 'broadcast', event: 'tiro',
+            payload: { x, y, a: angle, t: performance.now() }
+          });
+        } catch (e) {}
+      }
+    };
   },
 
   // ── Lobby UI ───────────────────────────────────────────
@@ -124,6 +147,11 @@ const OnlineMultiplayer = {
     el.classList.remove('hide');
     setTimeout(() => el.classList.add('hide'), 4000);
   },
+  _showIniciarBtn(show) {
+    const btn = document.getElementById('onlineIniciarBtn');
+    if (!btn) return;
+    btn.style.display = show ? '' : 'none';
+  },
 
   // ── Criar / Entrar / Sair da sala ──────────────────────
   criarSala() {
@@ -149,6 +177,7 @@ const OnlineMultiplayer = {
     const codigoView = document.getElementById('onlineCodigoView');
     if (codigoView) codigoView.textContent = codigo;
     this._setStatus(comoHost ? 'Aguardando segundo jogador...' : 'Conectando...');
+    this._showIniciarBtn(false);
     this.showLobby();
     this._showRoomView();
 
@@ -162,7 +191,6 @@ const OnlineMultiplayer = {
       if (estado === 'SUBSCRIBED') {
         this.conectado = true;
         if (!comoHost) {
-          // Convidado se anuncia
           this._canal.send({
             type: 'broadcast', event: 'hello',
             payload: { id: this.meuId }
@@ -176,33 +204,62 @@ const OnlineMultiplayer = {
   },
 
   _registerHandlers(c) {
-    // Host recebe quando convidado entra
     c.on('broadcast', { event: 'hello' }, ({ payload }) => {
       if (this.role !== 'host') return;
       this._outroId = payload.id;
-      this._setStatus('✓ Jogador conectado! ID: ' + payload.id);
-      // Host responde pro convidado saber que tem alguém
+      this._setStatus('✓ Jogador conectado! Pronto para começar.');
+      this._showIniciarBtn(true);
       this._canal.send({
         type: 'broadcast', event: 'hello_ack',
         payload: { id: this.meuId }
       });
     });
 
-    // Convidado recebe confirmação do host
     c.on('broadcast', { event: 'hello_ack' }, ({ payload }) => {
       if (this.role !== 'guest') return;
       this._outroId = payload.id;
-      this._setStatus('✓ Conectado ao host! ID: ' + payload.id);
+      this._setStatus('✓ Conectado ao host! Aguardando início da partida...');
     });
 
-    // Outro lado saiu
     c.on('broadcast', { event: 'sai' }, ({ payload }) => {
       if (this._outroId === payload.id) {
         this._outroId = null;
         this._setStatus(this.role === 'host'
           ? 'Outro jogador saiu. Aguardando...'
           : 'Host saiu da sala.');
+        this._showIniciarBtn(false);
+        if (this._outraNave) this._outraNave.ativa = false;
       }
+    });
+
+    // Host disparou o início
+    c.on('broadcast', { event: 'start_match' }, () => {
+      if (this.role !== 'guest') return;
+      this._startMatch();
+    });
+
+    // Posição do outro jogador (10Hz)
+    c.on('broadcast', { event: 'pos' }, ({ payload }) => {
+      if (!this._outraNave) return;
+      this._outraNave.ativa = true;
+      this._outraNave.buffer.push({
+        x: payload.x, y: payload.y, a: payload.a,
+        t: performance.now(),
+      });
+      if (this._outraNave.buffer.length > 30) this._outraNave.buffer.shift();
+    });
+
+    // Tiro do outro jogador (compensação de latência)
+    c.on('broadcast', { event: 'tiro' }, ({ payload }) => {
+      const lat = Math.max(0, (performance.now() - payload.t) / 1000);
+      const vx = Math.cos(payload.a) * CONFIG.BULLET_SPEED;
+      const vy = Math.sin(payload.a) * CONFIG.BULLET_SPEED;
+      this._remoteBullets.push({
+        x: payload.x + vx * lat,
+        y: payload.y + vy * lat,
+        vx, vy,
+        life: Math.max(0, CONFIG.BULLET_LIFE - lat),
+      });
     });
   },
 
@@ -219,12 +276,50 @@ const OnlineMultiplayer = {
     this.conectado = false;
     this.inRoom    = false;
     this._outroId  = null;
+    this._outraNave = null;
+    this._remoteBullets = [];
+    this._showIniciarBtn(false);
     this._showMainView();
     const input = document.getElementById('onlineCodigoInput');
     if (input) input.value = '';
   },
 
-  // ── Copiar link de convite ─────────────────────────────
+  // ── Iniciar partida ────────────────────────────────────
+  _hostStartMatch() {
+    if (this.role !== 'host') return;
+    if (!this._outroId) { this._showErro('Aguarde o outro jogador entrar.'); return; }
+    try {
+      this._canal.send({ type: 'broadcast', event: 'start_match', payload: {} });
+    } catch (e) {}
+    this._startMatch();
+  },
+
+  _startMatch() {
+    this.active = true;
+
+    // Força MP LOCAL desabilitado (não pode rodar os dois ao mesmo tempo)
+    if (typeof MultiplayerSystem !== 'undefined') {
+      MultiplayerSystem.enabled = false;
+    }
+
+    // Game.start reseta tudo. Os sistemas "mundo" não rodam graças aos
+    // desvios em Game.update / Game.draw quando active=true.
+    Game.start();
+
+    // De novo (Game.start pode mexer no toggle do MP LOCAL)
+    if (typeof MultiplayerSystem !== 'undefined') {
+      MultiplayerSystem.enabled = false;
+      MultiplayerSystem.showToggleBtn(false);
+    }
+
+    this._outraNave = { ativa: true, buffer: [] };
+    this._remoteBullets = [];
+    this._posTimer = 0;
+
+    this.hideLobby();
+  },
+
+  // ── Copiar link / Auto-join ────────────────────────────
   async _copiarLink() {
     if (!this.codigo) return;
     const link = location.origin + location.pathname + '?sala=' + encodeURIComponent(this.codigo);
@@ -235,7 +330,6 @@ const OnlineMultiplayer = {
       await navigator.clipboard.writeText(link);
       btn.textContent = '✓ LINK COPIADO';
     } catch (e) {
-      // Fallback pra navegadores antigos
       const tmp = document.createElement('textarea');
       tmp.value = link;
       document.body.appendChild(tmp);
@@ -247,7 +341,6 @@ const OnlineMultiplayer = {
     setTimeout(() => { btn.textContent = originalText; }, 1800);
   },
 
-  // ── Auto-join via ?sala=CODE na URL ────────────────────
   _autoJoinFromURL() {
     const params = new URLSearchParams(location.search);
     const salaParam = params.get('sala');
@@ -258,7 +351,167 @@ const OnlineMultiplayer = {
     }, 300);
   },
 
-  // ── Stubs pra próximos sub-passos ──────────────────────
-  update(dt) { /* sub-passo 1.4 */ },
-  draw()     { /* sub-passo 1.4 */ },
+  // ═════════════════════════════════════════════════════
+  //  GAME LOOP — chamado pelo Game.update/draw quando
+  //  OnlineMultiplayer.active === true
+  // ═════════════════════════════════════════════════════
+  update(dt) {
+    Game.elapsed += dt;
+
+    // Sistemas locais leves
+    DashSystem.update(dt);
+    ScreenFX.update(dt);
+
+    // Player local (movimento, rotação, tiro)
+    Player.update(dt);
+
+    // Balas locais
+    Bullets.update(dt);
+
+    // Balas remotas
+    for (let i = this._remoteBullets.length - 1; i >= 0; i--) {
+      const b = this._remoteBullets[i];
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.life -= dt;
+      if (b.life <= 0 || b.x < 0 || b.x > CONFIG.TARGET_W || b.y < 0 || b.y > CONFIG.TARGET_H) {
+        this._remoteBullets.splice(i, 1);
+      }
+    }
+
+    Particles.update(dt);
+    FloatText.update(dt);
+
+    // Broadcast minha posição a 10Hz
+    this._posTimer -= dt;
+    if (this._posTimer <= 0 && this._canal && this.conectado) {
+      this._posTimer = 0.1;
+      try {
+        this._canal.send({
+          type: 'broadcast', event: 'pos',
+          payload: { x: Player.x, y: Player.y, a: Player.angle, t: performance.now() }
+        });
+      } catch (e) {}
+    }
+  },
+
+  draw() {
+    // Arena IGUAL ao single player (mesmo grid, bordas, cantos)
+    UI.drawArena();
+
+    Particles.draw();
+
+    // Balas remotas (pink) atrás das minhas
+    this._drawRemoteBullets();
+
+    // Balas locais (cyan)
+    Bullets.draw();
+
+    // Nave remota (pink, interpolada)
+    this._drawRemotePlayer();
+
+    // Player local (cyan)
+    Player.draw();
+
+    FloatText.draw();
+
+    // HUD normal
+    UI.drawHUD();
+    UI.drawDashCooldown();
+  },
+
+  _drawRemotePlayer() {
+    if (!this._outraNave || !this._outraNave.ativa) return;
+    const buf = this._outraNave.buffer;
+    if (buf.length === 0) return;
+    if (buf.length === 1) {
+      this._drawShipAt(buf[0].x, buf[0].y, buf[0].a);
+      return;
+    }
+    const renderTime = performance.now() - 100; // 100ms atrás (interp suave)
+    let i = buf.length - 1;
+    while (i > 0 && buf[i].t > renderTime) i--;
+    const a = buf[i];
+    const b = buf[Math.min(i + 1, buf.length - 1)];
+    if (a === b) {
+      this._drawShipAt(a.x, a.y, a.a);
+      return;
+    }
+    const range = b.t - a.t;
+    let t = range > 0 ? (renderTime - a.t) / range : 1;
+    t = Math.max(0, Math.min(1, t));
+    const x = a.x + (b.x - a.x) * t;
+    const y = a.y + (b.y - a.y) * t;
+    let da = b.a - a.a;
+    if (da >  Math.PI) da -= 2 * Math.PI;
+    if (da < -Math.PI) da += 2 * Math.PI;
+    const ang = a.a + da * t;
+    this._drawShipAt(x, y, ang);
+  },
+
+  _drawShipAt(x, y, angle) {
+    const s = CONFIG.PLAYER_SIZE;
+    const color = '#ff00cc'; // pink (igual à cor secundária do game)
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = 28;
+
+    ctx.beginPath();
+    ctx.moveTo( s * 1.4,  0);
+    ctx.lineTo(-s,  s * 0.75);
+    ctx.lineTo(-s, -s * 0.75);
+    ctx.closePath();
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2.5;
+    ctx.fillStyle   = 'rgba(255,0,200,0.13)';
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.shadowBlur  = 8;
+    ctx.lineWidth   = 1;
+    ctx.strokeStyle = 'rgba(255,180,240,0.45)';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+    ctx.fillStyle   = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = 10;
+    ctx.fill();
+
+    ctx.restore();
+  },
+
+  _drawRemoteBullets() {
+    if (this._remoteBullets.length === 0) return;
+    ctx.save();
+    ctx.shadowColor = '#ff00cc';
+    ctx.shadowBlur  = 12;
+    const trailLen  = 0.05;
+    for (const b of this._remoteBullets) {
+      const alpha = Math.max(0, b.life / CONFIG.BULLET_LIFE);
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(b.x - b.vx * trailLen, b.y - b.vy * trailLen);
+      const grad = ctx.createLinearGradient(
+        b.x, b.y, b.x - b.vx * trailLen, b.y - b.vy * trailLen
+      );
+      grad.addColorStop(0, `rgba(255,80,220,${alpha * 0.7})`);
+      grad.addColorStop(1, 'rgba(180,40,160,0)');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth   = CONFIG.BULLET_RADIUS * 1.2;
+      ctx.lineCap     = 'round';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, CONFIG.BULLET_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,180,240,${alpha})`;
+      ctx.fill();
+    }
+    ctx.restore();
+  },
 };

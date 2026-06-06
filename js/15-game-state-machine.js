@@ -112,6 +112,12 @@ const Game = {
   update(dt) {
     if (this.state !== 'playing') return;
 
+    // ── Modo ONLINE: loop minimalista, pula sistemas "mundo" ──
+    if (typeof OnlineMultiplayer !== 'undefined' && OnlineMultiplayer.active) {
+      OnlineMultiplayer.update(dt);
+      return;
+    }
+
     // SlowMotion modifies effective dt for gameplay systems
     SlowMotion.update(dt);
     const gdt = dt * SlowMotion.dt;
@@ -165,6 +171,13 @@ const Game = {
     // Limpar canvas com preto
     ctx.save();
     ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+
+    // ── Modo ONLINE: render minimalista (arena igual single + naves + balas) ──
+    if (typeof OnlineMultiplayer !== 'undefined' && OnlineMultiplayer.active && this.state === 'playing') {
+      OnlineMultiplayer.draw();
+      ctx.restore();
+      return;
+    }
 
     switch (this.state) {
       case 'menu':
