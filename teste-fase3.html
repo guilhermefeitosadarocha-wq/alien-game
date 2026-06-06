@@ -217,6 +217,115 @@ const INVINCIBLE_TIME = 1.2;
 const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ═══════════════════════════════════════════════════════════════
+//  SFX — sons sintetizados (Web Audio API)
+// ═══════════════════════════════════════════════════════════════
+const SFX = {
+  _ctx: null, _master: null, _ready: false, _volume: 0.40,
+  _boot() {
+    if (this._ready) return true;
+    try {
+      this._ctx    = new (window.AudioContext || window.webkitAudioContext)();
+      this._master = this._ctx.createGain();
+      this._master.gain.value = this._volume;
+      this._master.connect(this._ctx.destination);
+      this._ready  = true;
+    } catch (e) { return false; }
+    return true;
+  },
+  _resume() { if (this._ctx && this._ctx.state === 'suspended') this._ctx.resume(); },
+  _osc(type, freq, t, dur, vol, atk) {
+    const c = this._ctx, g = c.createGain(); g.connect(this._master);
+    const o = c.createOscillator(); o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + (atk || 0.005));
+    g.gain.linearRampToValueAtTime(0,   t + dur);
+    o.connect(g); o.start(t); o.stop(t + dur + 0.01);
+  },
+  _sweep(type, fStart, fEnd, t, dur, vol) {
+    const c = this._ctx, g = c.createGain(); g.connect(this._master);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    const o = c.createOscillator(); o.type = type;
+    o.frequency.setValueAtTime(fStart, t);
+    o.frequency.exponentialRampToValueAtTime(fEnd, t + dur);
+    o.connect(g); o.start(t); o.stop(t + dur + 0.02);
+  },
+  _noise(t, dur, vol, hiPass) {
+    const c = this._ctx;
+    const size = Math.ceil(dur * c.sampleRate) + 256;
+    const buf  = c.createBuffer(1, size, c.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(); src.buffer = buf;
+    const g = c.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    if (hiPass) {
+      const hp = c.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = hiPass;
+      src.connect(hp); hp.connect(g);
+    } else {
+      src.connect(g);
+    }
+    g.connect(this._master);
+    src.start(t); src.stop(t + dur + 0.02);
+  },
+  _sounds: {
+    shoot() {
+      const t = SFX._ctx.currentTime;
+      SFX._sweep('sawtooth', 1800, 600, t, 0.08, 0.22);
+      SFX._osc('square',     2200,     t, 0.06, 0.10, 0.002);
+    },
+    kill_enemy() {
+      const t = SFX._ctx.currentTime;
+      SFX._sweep('sawtooth', 320, 60,  t,        0.22, 0.18);
+      SFX._sweep('square',   600, 100, t + 0.02, 0.18, 0.12);
+      SFX._noise(t, 0.10, 0.18, 800);
+      SFX._osc('sine', 880, t + 0.04, 0.10, 0.12, 0.01);
+    },
+    lose_life() {
+      const t = SFX._ctx.currentTime;
+      SFX._sweep('sawtooth', 320, 80, t,        0.35, 0.28);
+      SFX._sweep('square',   200, 60, t + 0.05, 0.32, 0.26);
+      SFX._noise(t, 0.14, 0.28, 150);
+      SFX._osc('square', 220, t + 0.18, 0.10, 0.26, 0.01);
+    },
+    game_over() {
+      const t = SFX._ctx.currentTime;
+      SFX._sweep('sawtooth', 440, 55, t,        0.45, 1.10);
+      SFX._sweep('square',   330, 40, t + 0.10, 0.40, 1.00);
+      SFX._sweep('sine',     220, 28, t + 0.20, 0.36, 0.95);
+      SFX._noise(t, 0.50, 0.32, 80);
+      SFX._osc('sine', 55, t + 0.85, 0.42, 0.70, 0.05);
+    },
+    ui_click() {
+      const t = SFX._ctx.currentTime;
+      SFX._osc('triangle', 1200, t,        0.06, 0.14, 0.003);
+      SFX._osc('sine',     1800, t + 0.02, 0.05, 0.10, 0.003);
+    },
+  },
+  play(name) {
+    if (!this._boot()) return;
+    this._resume();
+    const fn = this._sounds[name];
+    if (fn) fn();
+  },
+  setVolume(v) {
+    this._volume = Math.max(0, Math.min(1, v));
+    if (this._master) this._master.gain.value = this._volume;
+  },
+};
+
+// Unlock AudioContext no primeiro gesto do usuário
+(function _unlockAudio() {
+  const unlock = () => { SFX._boot(); SFX._resume(); };
+  window.addEventListener('pointerdown', unlock, { once: true });
+  window.addEventListener('keydown',     unlock, { once: true });
+  window.addEventListener('touchstart',  unlock, { once: true, passive: true });
+})();
+
+// ═══════════════════════════════════════════════════════════════
 //  UTILITÁRIOS
 // ═══════════════════════════════════════════════════════════════
 function gerarCodigo() {
@@ -468,10 +577,11 @@ function registrarHandlers(c) {
     const inim = inimigos.get(payload.enemyId);
     if (!inim) return; // já morreu / não existe
     if (dist(inim, { x: payload.x, y: payload.y }) > ENEMY_RADIUS + BULLET_RADIUS + 12) return; // sanity
-    inim.hp -= 1;
+   inim.hp -= 1;
     if (inim.hp <= 0) {
       inimigos.delete(payload.enemyId);
       score += 10;
+      SFX.play('kill_enemy');
     }
   });
 
@@ -481,8 +591,10 @@ function registrarHandlers(c) {
     if (SOU_HOST) return; // host não escuta o próprio estado
     score = payload.score;
     // vidas dos dois
+    const _vidasAntes = eu.vidas;
     eu.vidas       = payload.vidas[MEU_ID] != null ? payload.vidas[MEU_ID] : eu.vidas;
     outraNave.vidas = (outraNave.id && payload.vidas[outraNave.id] != null) ? payload.vidas[outraNave.id] : outraNave.vidas;
+    if (eu.vidas < _vidasAntes) SFX.play('lose_life');
     // inimigos: substitui pelo snapshot recebido (com buffer p/ interpolação)
     const recebidosIds = new Set();
     for (const e of payload.enemies) {
@@ -530,7 +642,8 @@ addEventListener('mouseup',   () => { mouseDown = false; });
 //  ATIRAR
 // ═══════════════════════════════════════════════════════════════
 function atirar() {
-  if (eu.fireTimer > 0 || !conectado || gameAcabou || eu.vidas <= 0) return;
+ if (eu.fireTimer > 0 || !conectado || gameAcabou || eu.vidas <= 0) return;
+  SFX.play('shoot');
   eu.fireTimer = FIRE_COOLDOWN;
   const ang = eu.angle;
   const tNasc = Date.now();
@@ -574,6 +687,7 @@ function aplicarDanoNave(qual) {
     if (eu.invincivel > 0 || eu.vidas <= 0) return;
     eu.vidas--;
     eu.invincivel = INVINCIBLE_TIME;
+    SFX.play('lose_life');
   } else {
     // representa a vida do convidado (do ponto de vista do host)
     if (outraNave.vidas <= 0) return;
@@ -601,6 +715,7 @@ function mostrarGameOver() {
   gameAcabou = true;
   document.getElementById('goScore').textContent = score;
   gameoverEl.classList.remove('hide');
+  SFX.play('game_over');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -711,10 +826,10 @@ function loop(agora) {
       // posição visual do inimigo (host usa direta; convidado usa última do buffer)
       const ix = inim.x, iy = inim.y;
       if (Math.hypot(b.x - ix, b.y - iy) < BULLET_RADIUS + ENEMY_RADIUS) {
-        if (SOU_HOST) {
+       if (SOU_HOST) {
           // Host aplica diretamente
           inim.hp -= 1;
-          if (inim.hp <= 0) { inimigos.delete(eid); score += 10; }
+          if (inim.hp <= 0) { inimigos.delete(eid); score += 10; SFX.play('kill_enemy'); }
         } else {
           // Convidado REPORTA ao host (Opção A)
           canal.send({
@@ -722,6 +837,7 @@ function loop(agora) {
             payload: { enemyId: eid, x: ix, y: iy }
           });
           msgsEnviadas++;
+          SFX.play('kill_enemy');
         }
         balas.splice(i, 1);
         break;
