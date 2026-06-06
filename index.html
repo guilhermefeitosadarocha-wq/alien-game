@@ -108,6 +108,9 @@
 <!-- Botão flutuante "CONTROLS" (visível no menu e pause via JS) -->
 <button id="settingsBtn" class="">⚙ CONTROLS</button>
 
+<!-- Botão ONLINE (multiplayer online) — visível só no menu -->
+<button id="onlineBtn" class="" title="Multiplayer Online">🌐 ONLINE</button>
+
 <!-- Painel de configurações -->
 <div id="settingsOverlay">
   <div id="settingsPanel">
@@ -496,6 +499,51 @@
       <button id="rankingCloseBtn" aria-label="Fechar">×</button>
     </div>
     <ul id="rankingList"></ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     ONLINE MULTIPLAYER LOBBY — overlay
+════════════════════════════════════════════ -->
+<div id="onlineLobby" class="online-lobby">
+  <div class="online-panel">
+    <div class="online-header">
+      <span class="online-title">◈ ONLINE — MULTIPLAYER</span>
+      <button id="onlineCloseBtn" class="online-close-btn" aria-label="Fechar">✕</button>
+    </div>
+
+    <!-- VISTA INICIAL: criar ou entrar -->
+    <div id="onlineLobbyMain">
+      <div class="online-section">
+        <p class="online-section-title">◆ CRIAR SALA NOVA</p>
+        <p class="online-section-sub">Você será o HOST. O outro jogador entra com o código.</p>
+        <button id="onlineCriarBtn" class="online-action-btn">CRIAR SALA</button>
+      </div>
+
+      <div class="online-divider"></div>
+
+      <div class="online-section">
+        <p class="online-section-title">◆ ENTRAR EM SALA</p>
+        <p class="online-section-sub">Cole o código (formato: NEON-XXXX).</p>
+        <div class="online-input-row">
+          <input id="onlineCodigoInput" type="text" placeholder="NEON-XXXX" maxlength="9">
+          <button id="onlineEntrarBtn" class="online-action-btn online-action-btn-alt">ENTRAR</button>
+        </div>
+      </div>
+
+      <div id="onlineLobbyErro" class="online-erro hide"></div>
+    </div>
+
+    <!-- VISTA DA SALA: depois de criar/entrar (lógica em 1.3) -->
+    <div id="onlineLobbyRoom" class="hide">
+      <p class="online-section-title">◈ SALA</p>
+      <div class="online-codigo-display">
+        <span id="onlineCodigoView">—</span>
+        <button id="onlineCopiarBtn">📋 COPIAR LINK</button>
+      </div>
+      <p class="online-status" id="onlineStatusMsg">Aguardando segundo jogador...</p>
+      <button id="onlineSairLobbyBtn" class="online-action-btn online-action-btn-secondary">SAIR DA SALA</button>
+    </div>
   </div>
 </div>
 

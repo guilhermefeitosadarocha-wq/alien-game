@@ -208,6 +208,9 @@ const UI = {
     // Mostra botão CONTROLS (DOM) no menu
     const _sb = document.getElementById('settingsBtn');
     if (_sb && !_sb.classList.contains('visible')) _sb.classList.add('visible');
+    // Mostra botão ONLINE no menu
+    const _ob = document.getElementById('onlineBtn');
+    if (_ob && !_ob.classList.contains('visible')) _ob.classList.add('visible');
     // Mostra botão de perfil no menu
     const _pb = document.getElementById('profileMenuBtn');
     if (_pb && !_pb.classList.contains('visible')) _pb.classList.add('visible');

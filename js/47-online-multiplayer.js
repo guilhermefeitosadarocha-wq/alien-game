@@ -22,14 +22,26 @@ const OnlineMultiplayer = {
 
   // ── Inicialização (chamado uma vez no boot) ────────────
   init() {
-    // Por enquanto só registra o módulo. Lobby/conexão/loop
-    // virão nos sub-passos 1.2, 1.3, 1.4 e 1.5.
-    console.log('[OnlineMultiplayer] módulo carregado (Fase 1, stub)');
+    console.log('[OnlineMultiplayer] módulo carregado (Fase 1.2)');
+
+    // Botão ONLINE do menu → abre o lobby
+    const btn = document.getElementById('onlineBtn');
+    if (btn) btn.addEventListener('click', () => this.showLobby());
+
+    // Botão X do lobby → fecha
+    const close = document.getElementById('onlineCloseBtn');
+    if (close) close.addEventListener('click', () => this.hideLobby());
   },
 
-  // ── API pública (stubs — serão implementados depois) ───
-  showLobby()    { /* sub-passo 1.2 */ },
-  hideLobby()    { /* sub-passo 1.2 */ },
+  // ── Lobby (mostrar/esconder overlay) ───────────────────
+  showLobby() {
+    const el = document.getElementById('onlineLobby');
+    if (el) el.classList.add('visible');
+  },
+  hideLobby() {
+    const el = document.getElementById('onlineLobby');
+    if (el) el.classList.remove('visible');
+  },
   criarSala()    { /* sub-passo 1.3 */ },
   entrarSala(c)  { /* sub-passo 1.3 */ },
   sairDaSala()   { /* sub-passo 1.5 */ },

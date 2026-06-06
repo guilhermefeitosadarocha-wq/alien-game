@@ -56,9 +56,11 @@ const Game = {
     if (typeof PauseUI !== 'undefined' && PauseUI._elPauseBtn) {
       PauseUI.syncPauseBtn('playing');
     }
-    // Oculta botão settings e MP durante o jogo
+    // Oculta botão settings, ONLINE e MP durante o jogo
     const _sb = document.getElementById('settingsBtn');
     if (_sb) _sb.classList.remove('visible');
+    const _ob = document.getElementById('onlineBtn');
+    if (_ob) _ob.classList.remove('visible');
     MultiplayerSystem.showToggleBtn(false);
     // Oculta botão de perfil durante o jogo
     const _pb = document.getElementById('profileMenuBtn');
