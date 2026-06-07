@@ -38,6 +38,8 @@ const OnlineMultiplayer = {
   _remoteBullets:  [],
   _posTimer:       0,
   _origBulletSpawn: null,
+  _enemyBroadcastTimer: 0,
+  _guestInvincibleTimer: 0,
 
   // ── Inicialização ──────────────────────────────────────
   init() {
@@ -261,6 +263,31 @@ const OnlineMultiplayer = {
         life: Math.max(0, CONFIG.BULLET_LIFE - lat),
       });
     });
+
+    // ── FASE 2: Estado do mundo do host (inimigos + score) ──
+    c.on('broadcast', { event: 'world_state' }, ({ payload }) => {
+      if (this.role !== 'guest') return;
+      if (Array.isArray(payload.enemies)) {
+        Enemies.pool = payload.enemies.map(e => ({
+          x: e.x, y: e.y, type: e.type, emoji: e.emoji,
+          size: e.size, hp: e.hp, maxHp: e.maxHp,
+          glow: e.glow, electricPulse: e.electricPulse || 0,
+          // Campos defensivos pra Enemies.draw não quebrar
+          scoreBonus: 0, coinBonus: 0, behaviour: 'chase',
+          zigzagTimer: 0, zigzagAngle: 0, shootTimer: 0,
+          speedFactor: 1, active: true,
+        }));
+      }
+      if (typeof payload.score === 'number') {
+        Game.score = payload.score;
+      }
+    });
+
+    // ── FASE 2: Notificação do host que o GUEST tomou dano ──
+    c.on('broadcast', { event: 'guest_hit' }, () => {
+      if (this.role !== 'guest') return;
+      Player.hit();
+    });
   },
 
   sairDaSala() {
@@ -382,6 +409,21 @@ const OnlineMultiplayer = {
     Particles.update(dt);
     FloatText.update(dt);
 
+    // ── HOST: roda inimigos + colisões + broadcast do estado do mundo ──
+    if (this.role === 'host') {
+      DifficultySystem.update();
+      Enemies.update(dt);
+      Collision.check();                  // balas do host vs inimigos + player do host vs inimigos
+      this._checkRemoteBulletsVsEnemies(); // balas do guest vs inimigos
+      this._checkRemotePlayerVsEnemies(dt);// player do guest vs inimigos
+
+      this._enemyBroadcastTimer -= dt;
+      if (this._enemyBroadcastTimer <= 0) {
+        this._enemyBroadcastTimer = 0.1; // 10Hz
+        this._broadcastWorldState();
+      }
+    }
+
     // Broadcast minha posição a 10Hz
     this._posTimer -= dt;
     if (this._posTimer <= 0 && this._canal && this.conectado) {
@@ -400,6 +442,9 @@ const OnlineMultiplayer = {
     UI.drawArena();
 
     Particles.draw();
+
+    // Inimigos (host simula; guest recebe via broadcast)
+    Enemies.draw();
 
     // Balas remotas (pink) atrás das minhas
     this._drawRemoteBullets();
@@ -513,5 +558,91 @@ const OnlineMultiplayer = {
       ctx.fill();
     }
     ctx.restore();
+  },
+
+  // ═════════════════════════════════════════════════════
+  //  FASE 2 — Inimigos host-autoritativos
+  // ═════════════════════════════════════════════════════
+
+  // Host: colisão entre balas do GUEST (em _remoteBullets) e inimigos.
+  _checkRemoteBulletsVsEnemies() {
+    const enemies = Enemies.pool;
+    for (let bi = this._remoteBullets.length - 1; bi >= 0; bi--) {
+      const b = this._remoteBullets[bi];
+      if (!b) continue;
+      for (let ei = enemies.length - 1; ei >= 0; ei--) {
+        const e = enemies[ei];
+        if (!e) continue;
+        const dx = b.x - e.x, dy = b.y - e.y;
+        const r = e.size * 0.85 + CONFIG.BULLET_RADIUS;
+        if (dx*dx + dy*dy < r*r) {
+          const impactX = b.x, impactY = b.y;
+          this._remoteBullets.splice(bi, 1);
+          e.hp--;
+          Particles.burst(impactX, impactY, 4, 'rgba(255,80,220,', 0.8);
+          if (e.hp <= 0) {
+            const ex = e.x, ey = e.y, eSize = e.size;
+            const scoreGain = (CONFIG.SCORE_PER_KILL + (e.scoreBonus || 0)) * (CONFIG._scoreBoost || 1);
+            Game.score += scoreGain;
+            DifficultySystem.kills++;
+            Particles.burst(ex, ey, CONFIG.PARTICLE_COUNT, 'rgba(255,100,220,', 1);
+            if ((e.coinBonus || 0) > 0) CoinSystem.add(e.coinBonus);
+            ScreenFX.shake(eSize > 25 ? 5 : 2, 0.12);
+            SFX.play('kill_enemy');
+            enemies.splice(ei, 1);
+          }
+          break;
+        }
+      }
+    }
+  },
+
+  // Host: colisão entre player do GUEST (última posição reportada) e inimigos.
+  _checkRemotePlayerVsEnemies(dt) {
+    if (this._guestInvincibleTimer > 0) {
+      this._guestInvincibleTimer -= dt;
+      return;
+    }
+    if (!this._outraNave || !this._outraNave.ativa) return;
+    const buf = this._outraNave.buffer;
+    if (buf.length === 0) return;
+    const last = buf[buf.length - 1];
+    const enemies = Enemies.pool;
+    for (let ei = enemies.length - 1; ei >= 0; ei--) {
+      const e = enemies[ei];
+      if (!e) continue;
+      const dx = e.x - last.x, dy = e.y - last.y;
+      const r = e.size * 0.72 + CONFIG.PLAYER_SIZE * 0.8;
+      if (dx*dx + dy*dy < r*r) {
+        enemies.splice(ei, 1);
+        this._guestInvincibleTimer = CONFIG.INVINCIBLE_TIME || 1.2;
+        try {
+          this._canal.send({
+            type: 'broadcast', event: 'guest_hit',
+            payload: { t: performance.now() }
+          });
+        } catch (err) {}
+        break;
+      }
+    }
+  },
+
+  // Host: broadcast do estado do mundo (inimigos + score) a 10Hz
+  _broadcastWorldState() {
+    if (!this._canal || !this.conectado) return;
+    const enemies = (Enemies.pool || []).map(e => ({
+      x: e.x, y: e.y, type: e.type, emoji: e.emoji,
+      size: e.size, hp: e.hp, maxHp: e.maxHp,
+      glow: e.glow, electricPulse: e.electricPulse || 0,
+    }));
+    try {
+      this._canal.send({
+        type: 'broadcast', event: 'world_state',
+        payload: {
+          enemies,
+          score: Game.score,
+        }
+      });
+    } catch (err) {}
   },
 };
