@@ -358,6 +358,9 @@ const OnlineMultiplayer = {
 
     // ── FASE 6: Morte local não para o loop ──
     c.on('broadcast', { event: 'player_dead' }, ({ payload }) => {
+      console.log('[ONLINE-DBG] recebeu player_dead. payload:', payload,
+                  'this.role:', this.role,
+                  'Player._dead local:', Player._dead);
       this._outroDead = true;
       // Se eu também já estou morto, agora é game over real pra ambos
       if (Player._dead) {
@@ -463,6 +466,9 @@ const OnlineMultiplayer = {
     this._localDeadBroadcasted = false;
     this._outroDead            = false;
     this._wrapGameOver();
+    console.log('[ONLINE-DBG] _startMatch concluído. active:', this.active,
+                '_origGameOver tipo:', typeof this._origGameOver,
+                'Game.gameOver é wrap?:', Game.gameOver !== this._origGameOver);
 
     this.hideLobby();
   },
@@ -508,6 +514,12 @@ const OnlineMultiplayer = {
     this._origGameOver = Game.gameOver.bind(Game);
     const self = this;
     Game.gameOver = function() {
+      console.log('[ONLINE-DBG] wrap chamado!',
+                  'self.active:', self.active,
+                  '_outroDead:', self._outroDead,
+                  'Player.lives:', Player.lives,
+                  'Player._dead:', Player._dead,
+                  'Game.state ANTES:', Game.state);
       if (!self.active) {
         // Partida encerrou (sairDaSala já restaurou) — chama normalmente
         self._origGameOver && self._origGameOver();
@@ -537,12 +549,14 @@ const OnlineMultiplayer = {
       }
       // Se o outro lado já estava morto → game over real pra ambos
       if (self._outroDead) {
+        console.log('[ONLINE-DBG] vai chamar _origGameOver (ambos mortos)');
         const real = self._origGameOver;
         self._origGameOver = null;
         Game.gameOver = real;
         real.call(Game);
+      } else {
+        console.log('[ONLINE-DBG] marcou Player._dead=true e broadcastou player_dead. NÃO chamou _origGameOver.');
       }
-      // Caso contrário: loop continua (game.state permanece 'playing')
     };
   },
 
@@ -552,6 +566,17 @@ const OnlineMultiplayer = {
   // ═════════════════════════════════════════════════════
   update(dt) {
     Game.elapsed += dt;
+
+    if (!this._dbgFrameCounter) this._dbgFrameCounter = 0;
+    this._dbgFrameCounter++;
+    if (this._dbgFrameCounter % 60 === 0) {
+      console.log('[ONLINE-DBG] tick', this._dbgFrameCounter,
+                  'Game.state:', Game.state,
+                  'Player.lives:', Player.lives,
+                  'Player._dead:', Player._dead,
+                  '_outroDead:', this._outroDead,
+                  'role:', this.role);
+    }
 
     // Sistemas locais leves
     DashSystem.update(dt);
@@ -607,6 +632,7 @@ const OnlineMultiplayer = {
     this._posTimer -= dt;
     if (this._posTimer <= 0 && this._canal && this.conectado) {
       this._posTimer = 0.1;
+      console.log('[ONLINE-DBG] broadcast pos. Player.lives:', Player.lives, 'Player._dead:', Player._dead);
       try {
         this._canal.send({
           type: 'broadcast', event: 'pos',
@@ -952,6 +978,8 @@ const OnlineMultiplayer = {
       pulse: p.pulse || 0,
     }));
 
+    console.log('[ONLINE-DBG] broadcast world_state. enemies:', Enemies.pool.length,
+                'Player._dead:', Player._dead, 'Game.state:', Game.state);
     try {
       this._canal.send({
         type: 'broadcast', event: 'world_state',
