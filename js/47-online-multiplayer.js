@@ -359,6 +359,10 @@ const OnlineMultiplayer = {
     // ── FASE 6: Morte local não para o loop ──
     c.on('broadcast', { event: 'player_dead' }, ({ payload }) => {
       this._outroDead = true;
+      // MIGRAÇÃO: se sou guest e ainda tô vivo, viro novo host
+      if (this.role === 'guest' && !Player._dead) {
+        this._becomeHost();
+      }
       // Se eu também já estou morto, agora é game over real pra ambos
       if (Player._dead) {
         if (this._origGameOver) {
@@ -467,6 +471,36 @@ const OnlineMultiplayer = {
     this.hideLobby();
   },
 
+  // ═════════════════════════════════════════════════════
+  //  HOST MIGRATION — Role pode trocar dinamicamente
+  // ═════════════════════════════════════════════════════
+
+  _becomeHost() {
+    if (this.role === 'host') return; // já sou host (idempotente)
+    if (!this.active) return;          // só faz sentido durante partida
+    console.log('[ONLINE] Migrei pra HOST — assumindo simulação');
+    this.role = 'host';
+
+    // Reset do broadcast timer pra começar a transmitir mundo imediatamente
+    this._enemyBroadcastTimer = 0;
+
+    // Continuar do ID mais alto que vi nos power-ups recebidos (evita conflito de IDs)
+    let maxId = 0;
+    for (const p of (PowerUps.pool || [])) {
+      if (p && p._onlineId && p._onlineId > maxId) maxId = p._onlineId;
+    }
+    this._nextPowerUpId = maxId;
+  },
+
+  _becomeGuest() {
+    if (this.role === 'guest') return; // já sou guest (idempotente)
+    if (!this.active) return;
+    console.log('[ONLINE] Migrei pra GUEST — parando simulação');
+    this.role = 'guest';
+    // Não precisa fazer mais nada — o bloco `if (this.role === 'host')` no
+    // update(dt) simplesmente para de rodar
+  },
+
   // ── Copiar link / Auto-join ────────────────────────────
   async _copiarLink() {
     if (!this.codigo) return;
@@ -524,6 +558,10 @@ const OnlineMultiplayer = {
         Input.keys      = {};
         FloatText.spawn(Player.x, Player.y - 30, 'ABATIDO!', '#ff4444', 18, 2.2);
         Particles.burst(Player.x, Player.y, 20, 'rgba(255,60,60,', 2.0);
+      }
+      // MIGRAÇÃO: se sou host e o outro tá vivo, transfiro a autoridade
+      if (self.role === 'host' && !self._outroDead) {
+        self._becomeGuest();
       }
       // Broadcasta a morte (apenas uma vez por partida)
       if (!self._localDeadBroadcasted) {
