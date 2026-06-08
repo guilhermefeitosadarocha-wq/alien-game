@@ -195,7 +195,6 @@ const OnlineMultiplayer = {
     this._registerHandlers(this._canal);
 
     this._canal.subscribe(estado => {
-      console.log('[ONLINE-DBG] canal estado:', estado, 'codigo:', codigo);
       if (estado === 'SUBSCRIBED') {
         this.conectado = true;
         if (!comoHost) {
@@ -359,9 +358,6 @@ const OnlineMultiplayer = {
 
     // ── FASE 6: Morte local não para o loop ──
     c.on('broadcast', { event: 'player_dead' }, ({ payload }) => {
-      console.log('[ONLINE-DBG] recebeu player_dead. payload:', payload,
-                  'this.role:', this.role,
-                  'Player._dead local:', Player._dead);
       this._outroDead = true;
       // Se eu também já estou morto, agora é game over real pra ambos
       if (Player._dead) {
@@ -403,9 +399,6 @@ const OnlineMultiplayer = {
   },
 
   sairDaSala() {
-    console.log('[ONLINE-DBG] sairDaSala chamado! active foi:', this.active,
-                'inRoom foi:', this.inRoom,
-                'stack:', new Error().stack);
     if (this._canal) {
       try {
         this._canal.send({ type: 'broadcast', event: 'sai', payload: { id: this.meuId } });
@@ -470,9 +463,6 @@ const OnlineMultiplayer = {
     this._localDeadBroadcasted = false;
     this._outroDead            = false;
     this._wrapGameOver();
-    console.log('[ONLINE-DBG] _startMatch concluído. active:', this.active,
-                '_origGameOver tipo:', typeof this._origGameOver,
-                'Game.gameOver é wrap?:', Game.gameOver !== this._origGameOver);
 
     this.hideLobby();
   },
@@ -518,12 +508,6 @@ const OnlineMultiplayer = {
     this._origGameOver = Game.gameOver.bind(Game);
     const self = this;
     Game.gameOver = function() {
-      console.log('[ONLINE-DBG] wrap chamado!',
-                  'self.active:', self.active,
-                  '_outroDead:', self._outroDead,
-                  'Player.lives:', Player.lives,
-                  'Player._dead:', Player._dead,
-                  'Game.state ANTES:', Game.state);
       if (!self.active) {
         // Partida encerrou (sairDaSala já restaurou) — chama normalmente
         self._origGameOver && self._origGameOver();
@@ -553,13 +537,10 @@ const OnlineMultiplayer = {
       }
       // Se o outro lado já estava morto → game over real pra ambos
       if (self._outroDead) {
-        console.log('[ONLINE-DBG] vai chamar _origGameOver (ambos mortos)');
         const real = self._origGameOver;
         self._origGameOver = null;
         Game.gameOver = real;
         real.call(Game);
-      } else {
-        console.log('[ONLINE-DBG] marcou Player._dead=true e broadcastou player_dead. NÃO chamou _origGameOver.');
       }
     };
   },
@@ -570,17 +551,6 @@ const OnlineMultiplayer = {
   // ═════════════════════════════════════════════════════
   update(dt) {
     Game.elapsed += dt;
-
-    if (!this._dbgFrameCounter) this._dbgFrameCounter = 0;
-    this._dbgFrameCounter++;
-    if (this._dbgFrameCounter % 60 === 0) {
-      console.log('[ONLINE-DBG] tick', this._dbgFrameCounter,
-                  'Game.state:', Game.state,
-                  'Player.lives:', Player.lives,
-                  'Player._dead:', Player._dead,
-                  '_outroDead:', this._outroDead,
-                  'role:', this.role);
-    }
 
     // Sistemas locais leves
     DashSystem.update(dt);
@@ -608,6 +578,8 @@ const OnlineMultiplayer = {
 
     // Pickup de power-ups (ambos os lados detectam pro próprio Player)
     this._checkPowerUpPickupForLocalPlayer();
+    // Feedback visual de hit no guest (não aplica dano — só polish visual)
+    this._checkLocalBulletHitVisualOnly();
 
     // ── HOST: roda inimigos + colisões + broadcast do estado do mundo ──
     if (this.role === 'host') {
@@ -627,7 +599,7 @@ const OnlineMultiplayer = {
 
       this._enemyBroadcastTimer -= dt;
       if (this._enemyBroadcastTimer <= 0) {
-        this._enemyBroadcastTimer = 0.1; // 10Hz
+        this._enemyBroadcastTimer = 0.05; // 20Hz (suavização visual dos inimigos no guest)
         this._broadcastWorldState();
       }
     }
@@ -636,7 +608,6 @@ const OnlineMultiplayer = {
     this._posTimer -= dt;
     if (this._posTimer <= 0 && this._canal && this.conectado) {
       this._posTimer = 0.1;
-      console.log('[ONLINE-DBG] broadcast pos. Player.lives:', Player.lives, 'Player._dead:', Player._dead);
       try {
         this._canal.send({
           type: 'broadcast', event: 'pos',
@@ -678,6 +649,27 @@ const OnlineMultiplayer = {
     // HUD normal
     UI.drawHUD();
     UI.drawDashCooldown();
+
+    // Overlay quando o player local morreu mas a partida continua
+    if (Player._dead && this.active) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(0, 0, CONFIG.TARGET_W, CONFIG.TARGET_H);
+
+      ctx.shadowColor = '#ff4466';
+      ctx.shadowBlur  = 24;
+      ctx.fillStyle   = '#ff4466';
+      ctx.font        = 'bold 36px "Courier New", monospace';
+      ctx.textAlign   = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('VOCÊ MORREU', CONFIG.TARGET_W / 2, CONFIG.TARGET_H / 2 - 22);
+
+      ctx.shadowBlur = 12;
+      ctx.fillStyle  = 'rgba(255,200,150,0.85)';
+      ctx.font       = '13px "Courier New", monospace';
+      ctx.fillText('aguardando outro jogador...', CONFIG.TARGET_W / 2, CONFIG.TARGET_H / 2 + 16);
+      ctx.restore();
+    }
   },
 
   _drawRemotePlayer() {
@@ -929,6 +921,33 @@ const OnlineMultiplayer = {
     }
   },
 
+  // POLISH: feedback visual de hit no guest (só visual, não aplica dano —
+  // dano real é processado pelo host via _checkRemoteBulletsVsEnemies)
+  _checkLocalBulletHitVisualOnly() {
+    if (this.role !== 'guest') return;
+    if (Player._dead) return;
+    const bullets = Bullets.pool;
+    const enemies = Enemies.pool;
+    if (!bullets || !enemies || enemies.length === 0) return;
+
+    for (let bi = bullets.length - 1; bi >= 0; bi--) {
+      const b = bullets[bi];
+      if (!b) continue;
+      for (let ei = 0; ei < enemies.length; ei++) {
+        const e = enemies[ei];
+        if (!e) continue;
+        const dx = b.x - e.x, dy = b.y - e.y;
+        const r = (e.size || 20) * 0.85 + CONFIG.BULLET_RADIUS;
+        if (dx*dx + dy*dy < r*r) {
+          Particles.burst(b.x, b.y, 5, 'rgba(0,220,255,', 0.7);
+          SFX.play('kill_enemy');
+          bullets.splice(bi, 1);
+          break;
+        }
+      }
+    }
+  },
+
   // FASE 4: Lasers recebidos vs Player local — guest
   _checkEnemyBulletsVsLocalPlayer() {
     if (Player._dead || Player.invincible > 0 || Game.state !== 'playing') return;
@@ -982,8 +1001,6 @@ const OnlineMultiplayer = {
       pulse: p.pulse || 0,
     }));
 
-    console.log('[ONLINE-DBG] broadcast world_state. enemies:', Enemies.pool.length,
-                'Player._dead:', Player._dead, 'Game.state:', Game.state);
     try {
       this._canal.send({
         type: 'broadcast', event: 'world_state',
