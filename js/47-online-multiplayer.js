@@ -264,20 +264,56 @@ const OnlineMultiplayer = {
       });
     });
 
-    // ── FASE 2: Estado do mundo do host (inimigos + score) ──
+    // ── FASE 2+4: Estado do mundo do host (inimigos + lasers + boss + score) ──
     c.on('broadcast', { event: 'world_state' }, ({ payload }) => {
       if (this.role !== 'guest') return;
+
+      // Inimigos comuns
       if (Array.isArray(payload.enemies)) {
         Enemies.pool = payload.enemies.map(e => ({
           x: e.x, y: e.y, type: e.type, emoji: e.emoji,
           size: e.size, hp: e.hp, maxHp: e.maxHp,
           glow: e.glow, electricPulse: e.electricPulse || 0,
-          // Campos defensivos pra Enemies.draw não quebrar
           scoreBonus: 0, coinBonus: 0, behaviour: 'chase',
           zigzagTimer: 0, zigzagAngle: 0, shootTimer: 0,
           speedFactor: 1, active: true,
         }));
       }
+
+      // Lasers (EnemyBullets)
+      if (Array.isArray(payload.enemyBullets)) {
+        EnemyBullets.pool = payload.enemyBullets.map(b => ({
+          x: b.x, y: b.y, vx: b.vx, vy: b.vy,
+          life: b.life, maxLife: b.maxLife,
+          r: b.r, isRobotLaser: !!b.isRobotLaser,
+        }));
+        // Aplica colisão dos lasers vs Player local
+        this._checkEnemyBulletsVsLocalPlayer();
+      }
+
+      // Boss
+      if (payload.boss) {
+        const b = payload.boss;
+        if (!BossSystem.boss) {
+          if (!BossSystem._barEl)   BossSystem._barEl   = document.getElementById('bossBar');
+          if (!BossSystem._fillEl)  BossSystem._fillEl  = document.getElementById('bossBarFill');
+          if (!BossSystem._labelEl) BossSystem._labelEl = document.getElementById('bossBarLabel');
+          if (BossSystem._barEl) BossSystem._barEl.classList.add('visible');
+        }
+        BossSystem.boss = {
+          x: b.x, y: b.y, size: b.size, emoji: b.emoji,
+          theme: b.theme, glowColor: b.glowColor, hitColor: b.hitColor,
+          hp: b.hp, maxHp: b.maxHp, name: b.name,
+        };
+        BossSystem._introTimer = b.intro ? BossSystem._INTRO_DUR * 0.5 : 0;
+        BossSystem._updateBar();
+      } else {
+        if (BossSystem.boss) {
+          BossSystem.boss = null;
+          if (BossSystem._barEl) BossSystem._barEl.classList.remove('visible');
+        }
+      }
+
       if (typeof payload.score === 'number') {
         Game.score = payload.score;
       }
@@ -416,6 +452,11 @@ const OnlineMultiplayer = {
       Collision.check();                  // balas do host vs inimigos + player do host vs inimigos
       this._checkRemoteBulletsVsEnemies(); // balas do guest vs inimigos
       this._checkRemotePlayerVsEnemies(dt);// player do guest vs inimigos
+      // Boss (Fase 4): host roda update + verifica colisões remotas
+      BossSystem.update(dt);
+      EnemyBullets.update(dt); // movimenta lasers + colisão vs Player do host
+      this._checkRemoteBulletsVsBoss();
+      this._checkRemotePlayerVsBoss(dt);
 
       this._enemyBroadcastTimer -= dt;
       if (this._enemyBroadcastTimer <= 0) {
@@ -445,6 +486,10 @@ const OnlineMultiplayer = {
 
     // Inimigos (host simula; guest recebe via broadcast)
     Enemies.draw();
+    // Lasers de inimigos/boss (host simula; guest recebe via broadcast)
+    EnemyBullets.draw();
+    // Boss (host simula; guest recebe via broadcast)
+    BossSystem.draw();
 
     // Balas remotas (pink) atrás das minhas
     this._drawRemoteBullets();
@@ -627,19 +672,98 @@ const OnlineMultiplayer = {
     }
   },
 
-  // Host: broadcast do estado do mundo (inimigos + score) a 10Hz
+  // FASE 4: Balas remotas (do guest) vs Boss — host
+  _checkRemoteBulletsVsBoss() {
+    if (!BossSystem.boss || BossSystem._introTimer > 0) return;
+    const boss = BossSystem.boss;
+    for (let bi = this._remoteBullets.length - 1; bi >= 0; bi--) {
+      const b = this._remoteBullets[bi];
+      if (!b) continue;
+      const dx = b.x - boss.x, dy = b.y - boss.y;
+      const r = boss.size * 0.9 + CONFIG.BULLET_RADIUS;
+      if (dx*dx + dy*dy < r*r) {
+        this._remoteBullets.splice(bi, 1);
+        if (typeof BossSystem.takeDamage === 'function') {
+          BossSystem.takeDamage(1);
+        }
+        break;
+      }
+    }
+  },
+
+  // FASE 4: Player remoto (guest) vs Boss — host detecta + broadcasta hit
+  _checkRemotePlayerVsBoss(dt) {
+    if (this._guestInvincibleTimer > 0) return;
+    if (!BossSystem.boss || BossSystem._introTimer > 0) return;
+    if (!this._outraNave || !this._outraNave.ativa) return;
+    const buf = this._outraNave.buffer;
+    if (buf.length === 0) return;
+    const last = buf[buf.length - 1];
+    const boss = BossSystem.boss;
+    const dx = boss.x - last.x, dy = boss.y - last.y;
+    const r = boss.size * 0.7 + CONFIG.PLAYER_SIZE;
+    if (dx*dx + dy*dy < r*r) {
+      this._guestInvincibleTimer = CONFIG.INVINCIBLE_TIME || 1.2;
+      try {
+        this._canal.send({
+          type: 'broadcast', event: 'guest_hit',
+          payload: { t: performance.now() }
+        });
+      } catch (e) {}
+    }
+  },
+
+  // FASE 4: Lasers recebidos vs Player local — guest
+  _checkEnemyBulletsVsLocalPlayer() {
+    if (Player._dead || Player.invincible > 0 || Game.state !== 'playing') return;
+    for (let i = 0; i < EnemyBullets.pool.length; i++) {
+      const b = EnemyBullets.pool[i];
+      if (!b) continue;
+      const dx = b.x - Player.x, dy = b.y - Player.y;
+      if (dx*dx + dy*dy < 16*16) {
+        Player.hit();
+        break;
+      }
+    }
+  },
+
+  // Host: broadcast do estado do mundo (inimigos + lasers + boss + score) a 10Hz
   _broadcastWorldState() {
     if (!this._canal || !this.conectado) return;
+
+    // Snapshot dos inimigos
     const enemies = (Enemies.pool || []).map(e => ({
       x: e.x, y: e.y, type: e.type, emoji: e.emoji,
       size: e.size, hp: e.hp, maxHp: e.maxHp,
       glow: e.glow, electricPulse: e.electricPulse || 0,
     }));
+
+    // Snapshot dos lasers (EnemyBullets)
+    const eb = (EnemyBullets.pool || []).map(b => ({
+      x: b.x, y: b.y, vx: b.vx, vy: b.vy,
+      life: b.life, maxLife: b.maxLife,
+      r: b.r, isRobotLaser: !!b.isRobotLaser,
+    }));
+
+    // Snapshot do boss (ou null se não tem)
+    let boss = null;
+    if (BossSystem.boss) {
+      const b = BossSystem.boss;
+      boss = {
+        x: b.x, y: b.y, size: b.size, emoji: b.emoji,
+        theme: b.theme, glowColor: b.glowColor, hitColor: b.hitColor,
+        hp: b.hp, maxHp: b.maxHp, name: b.name,
+        intro: BossSystem._introTimer > 0,
+      };
+    }
+
     try {
       this._canal.send({
         type: 'broadcast', event: 'world_state',
         payload: {
           enemies,
+          enemyBullets: eb,
+          boss,
           score: Game.score,
         }
       });
