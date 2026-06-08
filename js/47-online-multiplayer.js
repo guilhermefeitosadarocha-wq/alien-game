@@ -195,6 +195,7 @@ const OnlineMultiplayer = {
     this._registerHandlers(this._canal);
 
     this._canal.subscribe(estado => {
+      console.log('[ONLINE-DBG] canal estado:', estado, 'codigo:', codigo);
       if (estado === 'SUBSCRIBED') {
         this.conectado = true;
         if (!comoHost) {
@@ -402,6 +403,9 @@ const OnlineMultiplayer = {
   },
 
   sairDaSala() {
+    console.log('[ONLINE-DBG] sairDaSala chamado! active foi:', this.active,
+                'inRoom foi:', this.inRoom,
+                'stack:', new Error().stack);
     if (this._canal) {
       try {
         this._canal.send({ type: 'broadcast', event: 'sai', payload: { id: this.meuId } });
