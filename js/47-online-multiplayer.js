@@ -40,6 +40,8 @@ const OnlineMultiplayer = {
   _origBulletSpawn: null,
   _enemyBroadcastTimer: 0,
   _guestInvincibleTimer: 0,
+  _nextPowerUpId:     0,
+  _knownPowerUpIds:   null,  // Set, inicializado em _startMatch
 
   // ── Inicialização ──────────────────────────────────────
   init() {
@@ -314,6 +316,32 @@ const OnlineMultiplayer = {
         }
       }
 
+      // Power-ups (Fase 5)
+      if (Array.isArray(payload.powerUps)) {
+        const newIds = new Set();
+        for (const p of payload.powerUps) newIds.add(p.id);
+
+        // Som de "apareceu" pra power-ups que são novos
+        if (this._knownPowerUpIds) {
+          for (const id of newIds) {
+            if (!this._knownPowerUpIds.has(id)) SFX.play('powerup_appear');
+          }
+        }
+        this._knownPowerUpIds = newIds;
+
+        // Reconstrói o PowerUps.pool com referência ao type original
+        PowerUps.pool = payload.powerUps.map(p => {
+          const type = PowerUps._TYPES.find(t => t.id === p.typeId);
+          return {
+            _onlineId: p.id,
+            x: p.x, y: p.y,
+            type,
+            life: p.life, maxLife: p.maxLife,
+            pulse: p.pulse,
+          };
+        }).filter(p => p.type);
+      }
+
       if (typeof payload.score === 'number') {
         Game.score = payload.score;
       }
@@ -323,6 +351,33 @@ const OnlineMultiplayer = {
     c.on('broadcast', { event: 'guest_hit' }, () => {
       if (this.role !== 'guest') return;
       Player.hit();
+    });
+
+    // ── FASE 5: Outro jogador pegou um power-up ──
+    c.on('broadcast', { event: 'powerup_picked' }, ({ payload }) => {
+      // Remove do pool local (ambos os lados)
+      const idx = PowerUps.pool.findIndex(p => p._onlineId === payload.id);
+      if (idx >= 0) PowerUps.pool.splice(idx, 1);
+
+      // Host aplica efeitos compartilhados quando o guest pegou
+      if (this.role === 'host' && payload.by !== this.meuId) {
+        if (payload.typeId === 'clear') {
+          const enemiesPool = Enemies.pool || [];
+          enemiesPool.forEach(e => Particles.burst(e.x, e.y, 10, 'rgba(255,80,0,', 1.5));
+          enemiesPool.length = 0;
+          ScreenFX.flash('rgba(255,80,0,0.30)', 0.5);
+          if (typeof BossSystem !== 'undefined' && BossSystem.boss
+              && typeof BossSystem.takeDamage === 'function') {
+            BossSystem.takeDamage(8);
+          }
+        } else if (payload.typeId === 'scorex') {
+          PowerUps._applyTimed('scorex', 10, () => {
+            CONFIG._scoreBoost = 3;
+          }, () => {
+            CONFIG._scoreBoost = 1;
+          });
+        }
+      }
     });
   },
 
@@ -378,6 +433,8 @@ const OnlineMultiplayer = {
     this._outraNave = { ativa: true, buffer: [] };
     this._remoteBullets = [];
     this._posTimer = 0;
+    this._nextPowerUpId   = 0;
+    this._knownPowerUpIds = new Set();
 
     this.hideLobby();
   },
@@ -445,6 +502,9 @@ const OnlineMultiplayer = {
     Particles.update(dt);
     FloatText.update(dt);
 
+    // Pickup de power-ups (ambos os lados detectam pro próprio Player)
+    this._checkPowerUpPickupForLocalPlayer();
+
     // ── HOST: roda inimigos + colisões + broadcast do estado do mundo ──
     if (this.role === 'host') {
       DifficultySystem.update();
@@ -457,6 +517,9 @@ const OnlineMultiplayer = {
       EnemyBullets.update(dt); // movimenta lasers + colisão vs Player do host
       this._checkRemoteBulletsVsBoss();
       this._checkRemotePlayerVsBoss(dt);
+      // Power-ups: host gerencia spawn timer + lifecycle (NÃO chama PowerUps.update,
+      // porque ele tem pickup embutido que conflitaria com nossa detecção dupla)
+      this._hostPowerUpUpdate(dt);
 
       this._enemyBroadcastTimer -= dt;
       if (this._enemyBroadcastTimer <= 0) {
@@ -486,6 +549,8 @@ const OnlineMultiplayer = {
 
     // Inimigos (host simula; guest recebe via broadcast)
     Enemies.draw();
+    // Power-ups (host gera; ambos veem e podem pegar)
+    PowerUps.draw();
     // Lasers de inimigos/boss (host simula; guest recebe via broadcast)
     EnemyBullets.draw();
     // Boss (host simula; guest recebe via broadcast)
@@ -713,6 +778,52 @@ const OnlineMultiplayer = {
     }
   },
 
+  // ═════════════════════════════════════════════════════
+  //  FASE 5 — Power-ups temporários (host-autoritativo no spawn)
+  // ═════════════════════════════════════════════════════
+
+  // Host: spawn + lifecycle. Não inclui pickup — pickup é local nos dois lados.
+  _hostPowerUpUpdate(dt) {
+    PowerUps._spawnTimer -= dt;
+    if (PowerUps._spawnTimer <= 0) {
+      PowerUps._spawnTimer = Util.rand(18, 35);
+      PowerUps._spawn();
+      const newest = PowerUps.pool[PowerUps.pool.length - 1];
+      if (newest) newest._onlineId = ++this._nextPowerUpId;
+    }
+    for (let i = PowerUps.pool.length - 1; i >= 0; i--) {
+      const p = PowerUps.pool[i];
+      p.life -= dt;
+      p.pulse = (p.pulse || 0) + dt * 3;
+      if (p.life <= 0) PowerUps.pool.splice(i, 1);
+    }
+  },
+
+  // Ambos os lados: detecta pickup do próprio Player local.
+  // Quando pega: aplica efeito + broadcasta pro outro lado remover.
+  _checkPowerUpPickupForLocalPlayer() {
+    if (Player._dead || Game.state !== 'playing') return;
+    for (let i = PowerUps.pool.length - 1; i >= 0; i--) {
+      const p = PowerUps.pool[i];
+      if (!p || !p.type) continue;
+      if (Util.dist(p, Player) < 22 + CONFIG.PLAYER_SIZE) {
+        try { p.type.apply(); } catch (e) { console.warn('PowerUp apply falhou:', e); }
+        SFX.play('powerup_collect');
+        FloatText.spawn(p.x, p.y - 24, p.type.label, '#ffdd00', 18, 1.2);
+        const sentId = p._onlineId;
+        const sentTypeId = p.type.id;
+        try {
+          this._canal.send({
+            type: 'broadcast', event: 'powerup_picked',
+            payload: { id: sentId, typeId: sentTypeId, by: this.meuId }
+          });
+        } catch (e) {}
+        PowerUps.pool.splice(i, 1);
+        break;
+      }
+    }
+  },
+
   // FASE 4: Lasers recebidos vs Player local — guest
   _checkEnemyBulletsVsLocalPlayer() {
     if (Player._dead || Player.invincible > 0 || Game.state !== 'playing') return;
@@ -757,6 +868,15 @@ const OnlineMultiplayer = {
       };
     }
 
+    // Snapshot dos power-ups
+    const powerUps = (PowerUps.pool || []).map(p => ({
+      id: p._onlineId,
+      x: p.x, y: p.y,
+      typeId: p.type ? p.type.id : null,
+      life: p.life, maxLife: p.maxLife,
+      pulse: p.pulse || 0,
+    }));
+
     try {
       this._canal.send({
         type: 'broadcast', event: 'world_state',
@@ -764,6 +884,7 @@ const OnlineMultiplayer = {
           enemies,
           enemyBullets: eb,
           boss,
+          powerUps,
           score: Game.score,
         }
       });
