@@ -40,8 +40,11 @@ const OnlineMultiplayer = {
   _origBulletSpawn: null,
   _enemyBroadcastTimer: 0,
   _guestInvincibleTimer: 0,
-  _nextPowerUpId:     0,
-  _knownPowerUpIds:   null,  // Set, inicializado em _startMatch
+  _nextPowerUpId:        0,
+  _knownPowerUpIds:      null,  // Set, inicializado em _startMatch
+  _origGameOver:         null,  // wrap guard — null = não wrapeado
+  _localDeadBroadcasted: false, // já broadcastei minha própria morte nesta partida
+  _outroDead:            false, // outro jogador está morto
 
   // ── Inicialização ──────────────────────────────────────
   init() {
@@ -353,6 +356,20 @@ const OnlineMultiplayer = {
       Player.hit();
     });
 
+    // ── FASE 6: Morte local não para o loop ──
+    c.on('broadcast', { event: 'player_dead' }, ({ payload }) => {
+      this._outroDead = true;
+      // Se eu também já estou morto, agora é game over real pra ambos
+      if (Player._dead) {
+        if (this._origGameOver) {
+          const real = this._origGameOver;
+          this._origGameOver = null;
+          Game.gameOver = real;
+          real.call(Game);
+        }
+      }
+    });
+
     // ── FASE 5: Outro jogador pegou um power-up ──
     c.on('broadcast', { event: 'powerup_picked' }, ({ payload }) => {
       // Remove do pool local (ambos os lados)
@@ -389,6 +406,12 @@ const OnlineMultiplayer = {
       try { this._supa.removeChannel(this._canal); } catch (e) {}
       this._canal = null;
     }
+    // Restaura Game.gameOver se foi wrapeado (guard idempotente)
+    if (this._origGameOver) {
+      Game.gameOver = this._origGameOver;
+      this._origGameOver = null;
+    }
+    this.active    = false;
     this.codigo    = null;
     this.role      = null;
     this.conectado = false;
@@ -396,6 +419,8 @@ const OnlineMultiplayer = {
     this._outroId  = null;
     this._outraNave = null;
     this._remoteBullets = [];
+    this._localDeadBroadcasted = false;
+    this._outroDead            = false;
     this._showIniciarBtn(false);
     this._showMainView();
     const input = document.getElementById('onlineCodigoInput');
@@ -433,8 +458,11 @@ const OnlineMultiplayer = {
     this._outraNave = { ativa: true, buffer: [] };
     this._remoteBullets = [];
     this._posTimer = 0;
-    this._nextPowerUpId   = 0;
-    this._knownPowerUpIds = new Set();
+    this._nextPowerUpId        = 0;
+    this._knownPowerUpIds      = new Set();
+    this._localDeadBroadcasted = false;
+    this._outroDead            = false;
+    this._wrapGameOver();
 
     this.hideLobby();
   },
@@ -469,6 +497,53 @@ const OnlineMultiplayer = {
       this.showLobby();
       this.entrarSala(salaParam);
     }, 300);
+  },
+
+  // ── Fase 6: Intercepta Game.gameOver enquanto online ativo ────────────
+  // Guard idempotente: só wrapa uma vez (if _origGameOver === null).
+  // Quando o player local morre: marca _dead, broadcasta player_dead, e
+  // só chama o gameOver real quando o outro lado também estiver morto.
+  _wrapGameOver() {
+    if (this._origGameOver !== null) return; // já wrapeado
+    this._origGameOver = Game.gameOver.bind(Game);
+    const self = this;
+    Game.gameOver = function() {
+      if (!self.active) {
+        // Partida encerrou (sairDaSala já restaurou) — chama normalmente
+        self._origGameOver && self._origGameOver();
+        return;
+      }
+      // Morte local: marca o player como morto sem mudar Game.state
+      if (!Player._dead) {
+        Player._dead  = true;
+        Player.lives  = 0;
+        // Zera inputs para evitar "congelamento" de controle
+        Mobile.joyVec.x = 0; Mobile.joyVec.y = 0;
+        Mobile.shooting = false;
+        Input.shooting  = false;
+        Input.keys      = {};
+        FloatText.spawn(Player.x, Player.y - 30, 'ABATIDO!', '#ff4444', 18, 2.2);
+        Particles.burst(Player.x, Player.y, 20, 'rgba(255,60,60,', 2.0);
+      }
+      // Broadcasta a morte (apenas uma vez por partida)
+      if (!self._localDeadBroadcasted) {
+        self._localDeadBroadcasted = true;
+        try {
+          self._canal.send({
+            type: 'broadcast', event: 'player_dead',
+            payload: { id: self.meuId }
+          });
+        } catch (e) {}
+      }
+      // Se o outro lado já estava morto → game over real pra ambos
+      if (self._outroDead) {
+        const real = self._origGameOver;
+        self._origGameOver = null;
+        Game.gameOver = real;
+        real.call(Game);
+      }
+      // Caso contrário: loop continua (game.state permanece 'playing')
+    };
   },
 
   // ═════════════════════════════════════════════════════
