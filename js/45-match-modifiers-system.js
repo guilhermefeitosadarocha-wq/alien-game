@@ -1650,6 +1650,8 @@ const GameOverDOM = {
   _timeVal:     null,
   _rankingModal:null,
   _rankingList: null,
+  _scoreShown:  0,      // valor do score atualmente exibido (acompanha animação)
+  _scoreAnimRaf:null,   // handle do requestAnimationFrame da animação
 
   init() {
     this._overlay      = document.getElementById('gameOverDOM');
@@ -1707,6 +1709,24 @@ const GameOverDOM = {
     this._rankingModal.addEventListener('click', e => {
       if (e.target === this._rankingModal) this._closeRanking();
     });
+
+    // ── HOOK: wrap em ConvertSystem.convert pra animar o score no gameover ──
+    // O botão #convertBtn da HUD fica visível em cima da tela de gameover.
+    // Aqui interceptamos a conversão pra animar o número do score em vez de
+    // ele "saltar" instantâneo (que era a impressão de que nada mudava).
+    if (typeof ConvertSystem !== 'undefined' && !ConvertSystem._origConvert) {
+      ConvertSystem._origConvert = ConvertSystem.convert.bind(ConvertSystem);
+      const self = this;
+      ConvertSystem.convert = function() {
+        const before = Game.score;
+        const result = ConvertSystem._origConvert();
+        // Só anima se a conversão foi feita E a tela de gameover está visível
+        if (result === 'ok' && self._overlay && self._overlay.classList.contains('visible')) {
+          self._animateScoreDown(self._scoreShown, Game.score);
+        }
+        return result;
+      };
+    }
   },
 
   // Exibe a tela de game over com os dados da partida
@@ -1718,6 +1738,7 @@ const GameOverDOM = {
 
     // Score principal
     if (this._scoreVal) this._scoreVal.textContent = score;
+    this._scoreShown = score;
 
     // Tempo
     if (this._timeVal) this._timeVal.textContent = time;
@@ -1796,6 +1817,32 @@ const GameOverDOM = {
         `<span class="rk-time">${tempo}</span>`;
       this._rankingList.appendChild(li);
     });
+  },
+
+  // Anima o número exibido no #goScoreValue suavemente de `fromVal` até `toVal`
+  // ao longo de `duration` ms (ease-out cubic). Cancela animação em andamento
+  // se outro clique de CONVERTER chegar durante a transição.
+  _animateScoreDown(fromVal, toVal, duration = 450) {
+    if (!this._scoreVal) return;
+    if (this._scoreAnimRaf) cancelAnimationFrame(this._scoreAnimRaf);
+
+    const startTime = performance.now();
+    const delta = toVal - fromVal; // negativo
+    const step = (now) => {
+      const t = Math.min(1, (now - startTime) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const current = Math.round(fromVal + delta * eased);
+      this._scoreVal.textContent = current;
+      this._scoreShown = current;
+      if (t < 1) {
+        this._scoreAnimRaf = requestAnimationFrame(step);
+      } else {
+        this._scoreVal.textContent = toVal;
+        this._scoreShown = toVal;
+        this._scoreAnimRaf = null;
+      }
+    };
+    this._scoreAnimRaf = requestAnimationFrame(step);
   },
 };
 
