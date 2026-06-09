@@ -50,6 +50,7 @@ MPModeSelect.init();
 OnlineMultiplayer.init();
 AnchorMode.init();
 GameOverDOM.init();
+HelpUI.init();
 TutorialSystem.init();
 ShotEquipSystem.init();
 DashModeSystem.init();

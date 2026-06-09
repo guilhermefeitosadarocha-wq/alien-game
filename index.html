@@ -329,8 +329,36 @@
 </div>
 
     </div><!-- /settingsBody -->
+
+    <div id="settingsFooter">
+      <button id="settingsHelpBtn">❓ AJUDA / CONTROLES</button>
+    </div>
   </div><!-- /settingsPanel -->
 </div><!-- /settingsOverlay -->
+
+<!-- Modal de Ajuda / Controles -->
+<div id="helpOverlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="help-panel">
+    <div class="help-header">
+      <h2 id="helpTitle">❓ CONTROLES E AJUDA</h2>
+      <button id="helpCloseBtn" class="help-close-btn" aria-label="Fechar ajuda">✕</button>
+    </div>
+    <div class="help-content">
+      <section class="help-section" id="helpDesktopSection">
+        <h3 class="help-section-title">🖥 Jogador 1 — Desktop</h3>
+        <ul class="help-list" id="helpDesktopList"></ul>
+      </section>
+      <section class="help-section" id="helpMobileSection">
+        <h3 class="help-section-title">📱 Mobile</h3>
+        <ul class="help-list" id="helpMobileList"></ul>
+      </section>
+      <section class="help-section" id="helpP2Section">
+        <h3 class="help-section-title">👥 Multiplayer Local — P2</h3>
+        <ul class="help-list" id="helpP2List"></ul>
+      </section>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════════
      EXPANSION PACK — DOM elements
@@ -608,6 +636,7 @@
 <script src="js/45c-mobile-dash.js"></script>
 <script src="js/45d-shot-equip.js"></script>
 <script src="js/45e-dash-mode.js"></script>
+<script src="js/45f-help-ui.js"></script>
 <script src="js/47-online-multiplayer.js"></script>
 <script src="js/47-online-multiplayer.js"></script>
 <script src="js/46-init.js"></script>

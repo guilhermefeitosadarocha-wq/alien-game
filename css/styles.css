@@ -2394,3 +2394,200 @@ body:has(#gameOverDOM.visible) #coinPanel { z-index: 951; }
   text-align: center;
   font-style: italic;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   HELP UI — botão no rodapé de Settings + modal de controles
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Rodapé do painel de Configurações ── */
+#settingsFooter {
+  padding: 12px 22px 16px;
+  border-top: 1px solid rgba(0,200,255,0.12);
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+#settingsHelpBtn {
+  background: none;
+  border: 1px solid rgba(0,200,255,0.28);
+  border-radius: 8px;
+  color: rgba(0,200,255,0.75);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+  padding: 8px 24px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+#settingsHelpBtn:hover {
+  background: rgba(0,200,255,0.10);
+  color: #00c8ff;
+  border-color: rgba(0,200,255,0.55);
+  box-shadow: 0 0 12px rgba(0,200,255,0.15);
+}
+
+/* ── Overlay backdrop ── */
+#helpOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+}
+#helpOverlay.open {
+  display: flex;
+  animation: helpFadeIn 0.22s ease both;
+}
+@keyframes helpFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Painel central ── */
+.help-panel {
+  position: relative;
+  width: min(560px, 96vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(2,10,22,0.98);
+  border: 1px solid rgba(0,200,255,0.20);
+  border-radius: 18px;
+  box-shadow: 0 0 60px rgba(0,200,255,0.12), 0 8px 40px rgba(0,0,0,0.7);
+  overflow: hidden;
+  animation: helpPanelIn 0.25s cubic-bezier(.22,.68,0,1.2) both;
+}
+.help-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 12%; right: 12%; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,200,255,0.65), transparent);
+  pointer-events: none;
+}
+@keyframes helpPanelIn {
+  from { transform: translateY(22px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+
+/* ── Header ── */
+.help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid rgba(0,200,255,0.12);
+  flex-shrink: 0;
+}
+#helpTitle {
+  font-family: 'Orbitron', 'Courier New', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #00c8ff;
+  text-shadow: 0 0 14px rgba(0,200,255,0.65);
+  margin: 0;
+}
+.help-close-btn {
+  background: none;
+  border: 1px solid rgba(0,200,255,0.28);
+  border-radius: 6px;
+  color: rgba(0,200,255,0.7);
+  font-size: 18px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.help-close-btn:hover { background: rgba(0,200,255,0.12); color: #00c8ff; }
+
+/* ── Área de conteúdo (scroll) ── */
+.help-content {
+  overflow-y: auto;
+  flex: 1;
+  padding: 18px 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,200,255,0.28) transparent;
+}
+.help-content::-webkit-scrollbar { width: 4px; }
+.help-content::-webkit-scrollbar-thumb { background: rgba(0,200,255,0.28); border-radius: 3px; }
+
+/* ── Seções ── */
+.help-section { display: flex; flex-direction: column; gap: 8px; }
+.help-section-title {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.16em;
+  color: rgba(0,200,255,0.55);
+  text-transform: uppercase;
+  margin: 0 0 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(0,200,255,0.10);
+}
+
+/* ── Lista de controles ── */
+.help-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.help-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 28px;
+}
+.help-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 4px 8px;
+  background: rgba(0,200,255,0.07);
+  border: 1px solid rgba(0,200,255,0.30);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  color: #00c8ff;
+  text-shadow: 0 0 8px rgba(0,200,255,0.45);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.help-action {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: rgba(200,230,255,0.82);
+  letter-spacing: 0.03em;
+}
+
+/* ── Responsivo mobile (≤ 600px) ── */
+@media (max-width: 600px) {
+  .help-panel {
+    width: 100%;
+    border-radius: 14px 14px 0 0;
+    max-height: 92vh;
+    margin-top: auto;
+    align-self: flex-end;
+  }
+  #helpOverlay { align-items: flex-end; padding-bottom: 0; }
+  .help-key  { min-width: 42px; font-size: 10px; }
+  .help-action { font-size: 12px; }
+}
