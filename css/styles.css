@@ -2399,32 +2399,26 @@ body:has(#gameOverDOM.visible) #coinPanel { z-index: 951; }
    HELP UI — botão no rodapé de Settings + modal de controles
    ═══════════════════════════════════════════════════════════ */
 
-/* ── Rodapé do painel de Configurações ── */
-#settingsFooter {
-  padding: 12px 22px 16px;
-  border-top: 1px solid rgba(0,200,255,0.12);
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-}
+/* ── Botão Ajuda dentro do painel de Configurações ── */
 #settingsHelpBtn {
-  background: none;
+  flex-shrink: 0;
+  margin: 0 22px 16px;
+  padding: 10px 14px;
+  background: rgba(0,200,255,0.06);
   border: 1px solid rgba(0,200,255,0.28);
   border-radius: 8px;
   color: rgba(0,200,255,0.75);
   font-family: 'Courier New', monospace;
   font-size: 12px;
   font-weight: bold;
-  letter-spacing: 0.12em;
-  padding: 8px 24px;
+  letter-spacing: 0.10em;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, box-shadow 0.15s;
 }
 #settingsHelpBtn:hover {
-  background: rgba(0,200,255,0.10);
+  background: rgba(0,200,255,0.14);
   color: #00c8ff;
-  border-color: rgba(0,200,255,0.55);
-  box-shadow: 0 0 12px rgba(0,200,255,0.15);
+  box-shadow: 0 0 10px rgba(0,200,255,0.22);
 }
 
 /* ── Overlay backdrop ── */
