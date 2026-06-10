@@ -7,6 +7,7 @@ const Player = {
   lives: CONFIG.PLAYER_LIVES,
   invincible: 0,       // segundos restantes de invencibilidade
   fireTimer: 0,
+  skin: 'default',
 
   reset() {
     this.x = CONFIG.TARGET_W / 2;
@@ -103,7 +104,7 @@ const Player = {
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
 
-    // Shield ring when invincible
+    // Shield ring when invincible (mesmo para todos os skins)
     if (this.invincible > 0) {
       ctx.beginPath();
       ctx.arc(0, 0, CONFIG.PLAYER_SIZE + 8, 0, Math.PI * 2);
@@ -114,11 +115,22 @@ const Player = {
       ctx.stroke();
     }
 
-    // Glow halo (double layer for richness)
+    if (this.skin === 'interceptor') {
+      this._drawInterceptor(glowBonus);
+    } else {
+      this._drawDefault(glowBonus);
+    }
+
+    ctx.restore();
+
+    // Ship Evolution extras (wings, core, trail)
+    ShipEvolution.drawExtras(this.x, this.y, this.angle);
+  },
+
+  _drawDefault(glowBonus) {
     ctx.shadowColor = CONFIG.NEON_COLOR;
     ctx.shadowBlur  = 28 + glowBonus;
 
-    // Triângulo
     ctx.beginPath();
     const s = CONFIG.PLAYER_SIZE;
     ctx.moveTo( s * 1.4,  0);
@@ -126,33 +138,111 @@ const Player = {
     ctx.lineTo(-s, -s * 0.75);
     ctx.closePath();
 
-    const nc = CONFIG.NEON_COLOR;
     ctx.strokeStyle = CONFIG.NEON_COLOR;
     ctx.lineWidth   = 2.5;
-    ctx.fillStyle   = 'rgba(0,238,255,0.18)';
-    // Simpler fill — just use transparent color
-    ctx.fillStyle = 'rgba(0,200,255,0.13)';
+    ctx.fillStyle   = 'rgba(0,200,255,0.13)';
     ctx.fill();
     ctx.stroke();
 
-    // Inner glow line
-    ctx.shadowBlur = 8 + glowBonus * 0.5;
-    ctx.lineWidth  = 1;
+    ctx.shadowBlur  = 8 + glowBonus * 0.5;
+    ctx.lineWidth   = 1;
     ctx.strokeStyle = 'rgba(180,240,255,0.45)';
     ctx.stroke();
 
-    // Ponto central
     ctx.beginPath();
     ctx.arc(0, 0, 3, 0, Math.PI * 2);
     ctx.fillStyle   = CONFIG.NEON_COLOR;
     ctx.shadowColor = CONFIG.NEON_COLOR;
     ctx.shadowBlur  = 10;
     ctx.fill();
+  },
 
-    ctx.restore();
+  _drawInterceptor(glowBonus) {
+    const s = CONFIG.PLAYER_SIZE;
+    const elapsed      = (typeof Game !== 'undefined') ? Game.elapsed : (performance.now() / 1000);
+    const enginePulse  = 0.8 + Math.sin(elapsed * 9) * 0.2;
 
-    // Ship Evolution extras (wings, core, trail)
-    ShipEvolution.drawExtras(this.x, this.y, this.angle);
+    // Motores traseiros (desenhados antes do casco, ficam por baixo)
+    ctx.shadowColor = '#ff8800';
+    ctx.shadowBlur  = Math.round(12 * enginePulse);
+    ctx.fillStyle   = `rgba(255,${Math.round(140 + 100 * enginePulse)},20,0.92)`;
+    ctx.beginPath();
+    ctx.arc(-s * 0.85, -s * 0.35, s * 0.17 * enginePulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-s * 0.85,  s * 0.35, s * 0.17 * enginePulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glow do casco
+    ctx.shadowColor = '#a259ff';
+    ctx.shadowBlur  = 20 + glowBonus;
+    ctx.fillStyle   = 'rgba(90,30,140,0.88)';
+    ctx.strokeStyle = '#00f6ff';
+    ctx.lineWidth   = 1.5;
+
+    // Asa direita
+    ctx.beginPath();
+    ctx.moveTo( s * 0.25,  s * 0.45);
+    ctx.lineTo(-s * 0.05,  s * 1.45);
+    ctx.lineTo(-s * 0.65,  s * 1.5);
+    ctx.lineTo(-s * 0.8,   s * 0.42);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Asa esquerda
+    ctx.beginPath();
+    ctx.moveTo( s * 0.25, -s * 0.45);
+    ctx.lineTo(-s * 0.05, -s * 1.45);
+    ctx.lineTo(-s * 0.65, -s * 1.5);
+    ctx.lineTo(-s * 0.8,  -s * 0.42);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Fuselagem (hexágono alongado)
+    ctx.beginPath();
+    ctx.moveTo( s * 1.55,  0);
+    ctx.lineTo( s * 0.55,  s * 0.42);
+    ctx.lineTo(-s * 0.85,  s * 0.38);
+    ctx.lineTo(-s * 1.05,  0);
+    ctx.lineTo(-s * 0.85, -s * 0.38);
+    ctx.lineTo( s * 0.55, -s * 0.42);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Linhas de painel nas asas
+    ctx.strokeStyle = 'rgba(162,89,255,0.5)';
+    ctx.lineWidth   = 0.7;
+    ctx.shadowBlur  = 3;
+    ctx.beginPath();
+    ctx.moveTo( s * 0.1,   s * 0.65);
+    ctx.lineTo(-s * 0.45,  s * 1.25);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo( s * 0.1,  -s * 0.65);
+    ctx.lineTo(-s * 0.45, -s * 1.25);
+    ctx.stroke();
+
+    // Cockpit
+    ctx.shadowBlur = 0;
+    ctx.fillStyle  = 'rgba(195,240,255,0.82)';
+    ctx.beginPath();
+    ctx.ellipse(s * 0.4, 0, s * 0.22, s * 0.17, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.38)';
+    ctx.beginPath();
+    ctx.ellipse(s * 0.44, -s * 0.05, s * 0.10, s * 0.07, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ponto central
+    ctx.beginPath();
+    ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle   = '#a259ff';
+    ctx.shadowColor = '#a259ff';
+    ctx.shadowBlur  = 10 + glowBonus * 0.5;
+    ctx.fill();
   },
 };
 

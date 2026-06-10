@@ -154,6 +154,15 @@ const ShopUI = {
           SFX.play('shop_buy');
           return;
         }
+        // Skin Equip: toggle equip/unequip
+        if (typeof SkinEquipSystem !== 'undefined' && SkinEquipSystem.isEquippable(item.id)
+            && PurchaseSystem.isMaxed(item.id)) {
+          SkinEquipSystem.equip(item.id);
+          const isNowEq = SkinEquipSystem.isEquipped(item.id);
+          this.showToast(item.name + (isNowEq ? ' equipado!' : ' desequipado.'), 'success');
+          SFX.play('shop_buy');
+          return;
+        }
         const result = PurchaseSystem.buy(item.id);
         if (result === 'ok') {
           this.flashCoin();
@@ -215,6 +224,12 @@ const ShopUI = {
         els.btn.textContent = isEq ? '✓ EQUIPADO' : 'EQUIPAR';
         els.btn.disabled    = isEq;
         els.btn.className   = isEq ? 'shop-buy-btn maxed-btn' : 'shop-buy-btn';
+      } else if (typeof SkinEquipSystem !== 'undefined' && SkinEquipSystem.isEquippable(id)) {
+        // Skin: toggle — EQUIPAR ou EQUIPADO (clicável para desequipar)
+        var isEqSkin = SkinEquipSystem.isEquipped(id);
+        els.btn.textContent = isEqSkin ? '✓ EQUIPADO' : 'EQUIPAR';
+        els.btn.disabled    = false;
+        els.btn.className   = isEqSkin ? 'shop-buy-btn maxed-btn' : 'shop-buy-btn';
       } else {
         els.btn.textContent = '✓ MÁXIMO';
         els.btn.disabled    = true;

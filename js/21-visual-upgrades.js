@@ -17,3 +17,32 @@ const VisualUpgrades = {
   },
 };
 
+// ═══════════════════════════════════════════════════════════
+//  SKIN EQUIP SYSTEM — gerencia qual skin de nave está ativo
+// ═══════════════════════════════════════════════════════════
+const SkinEquipSystem = {
+  _equipped: null,   // null = padrão; 'interceptor' = interceptor equipado
+
+  isEquippable(id) { return id === 'skin_interceptor'; },
+  isEquipped(id)   { return id === 'skin_interceptor' && this._equipped === 'interceptor'; },
+
+  equip(id) {
+    if (id !== 'skin_interceptor') return;
+    if (this._equipped === 'interceptor') {
+      this._equipped = null;
+      Player.skin = 'default';
+    } else {
+      this._equipped = 'interceptor';
+      Player.skin = 'interceptor';
+    }
+    if (typeof ShopUI !== 'undefined') ShopUI._refreshAllCards();
+  },
+
+  onPurchase(lvl) {
+    if (lvl <= 0) {
+      this._equipped = null;
+      if (typeof Player !== 'undefined') Player.skin = 'default';
+    }
+  },
+};
+

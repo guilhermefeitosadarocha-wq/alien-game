@@ -143,6 +143,13 @@ const SHOP_ITEMS = [
     price: 30, maxLevel: 2,
     effect(lvl) { VisualUpgrades.applyNeonTrail(lvl); },
   },
+  {
+    id: 'skin_interceptor', category: 'visual',
+    name: 'INTERCEPTOR',   icon: '🛸',
+    desc: 'Nave futurista: asas amplas, cockpit iluminado e motores pulsantes.',
+    price: 150, maxLevel: 1,
+    effect(lvl) { if (typeof SkinEquipSystem !== 'undefined') SkinEquipSystem.onPurchase(lvl); },
+  },
 ];
 
 const SHOP_CATEGORIES = [
