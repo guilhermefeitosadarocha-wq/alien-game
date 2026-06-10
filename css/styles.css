@@ -143,6 +143,9 @@
     /* Shop btn menor */
     #shopOpenBtn { font-size: 11px; padding: 6px 12px; top: max(8px, env(safe-area-inset-top,8px)); left: max(8px, env(safe-area-inset-left,8px)); }
 
+    /* Online btn abaixo da loja no mobile (loja height ~28px + 8px gap) */
+    #onlineBtn { top: calc(max(8px, env(safe-area-inset-top,8px)) + 36px); left: max(8px, env(safe-area-inset-left,8px)); }
+
     /* Settings btn abaixo do mpToggleBtn, ambos acima dos controles móveis */
     #settingsBtn { bottom: 16px; font-size: 10px; padding: 6px 14px; }
 
@@ -2163,7 +2166,7 @@ body:has(#gameOverDOM.visible) #coinPanel { z-index: 951; }
 
 #onlineBtn {
   position: fixed;
-  top: 16px;
+  top: 59px;
   left: 16px;
   z-index: 201;
   background: rgba(0, 30, 15, 0.82);
