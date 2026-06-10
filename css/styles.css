@@ -605,6 +605,7 @@
     top: 16px;
     /* fica à esquerda do coinPanel que tem right:16px + ~120px de largura */
     right: 150px;
+    touch-action: none;
     z-index: 201;
     width: 38px; height: 38px;
     border-radius: 8px;

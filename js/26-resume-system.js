@@ -95,15 +95,12 @@ const PauseEvents = {
   _init() {
     // ── Botão flutuante de pause ─────────────────────────
     const pauseBtn = document.getElementById('pauseBtn');
-    pauseBtn.addEventListener('click', () => {
+    pauseBtn.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;   // só botão esquerdo / toque primário
+      e.preventDefault();           // impede que o pointerdown vaze pro canvas
       if (PauseState.canPause())  PauseEvents._doPause();
       else if (PauseState.canResume()) ResumeSystem.resume();
     });
-    pauseBtn.addEventListener('touchend', e => {
-      e.preventDefault();
-      if (PauseState.canPause())  PauseEvents._doPause();
-      else if (PauseState.canResume()) ResumeSystem.resume();
-    }, { passive: false });
 
     // ── Botão Continue ────────────────────────────────────
     document.getElementById('pauseContinueBtn').addEventListener('click', () => ResumeSystem.resume());
