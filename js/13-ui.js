@@ -2,6 +2,8 @@
 //  UI — HUD, MENU, PAUSE, GAME OVER
 // ═══════════════════════════════════════════════════════════
 const UI = {
+  _convertBtnEl: null,
+
   // Formata tempo mm:ss
   formatTime(s) {
     const m = Math.floor(s / 60);
@@ -48,7 +50,12 @@ const UI = {
     ctx.shadowBlur = 0;
     ctx.fillText('TEMPO', CONFIG.TARGET_W / 2, pad + 24);
 
-    // --- Vidas ---
+    // --- Vidas (abaixo do #convertBtn) ---
+    if (!this._convertBtnEl) this._convertBtnEl = document.getElementById('convertBtn');
+    const _cbRect = this._convertBtnEl ? this._convertBtnEl.getBoundingClientRect() : null;
+    const _heartScreenY = _cbRect ? _cbRect.bottom + 8 : 90;
+    const _heartWorldY  = _heartScreenY / scale;
+
     ctx.textAlign = 'right';
     ctx.shadowColor = '#ff4466';
     ctx.shadowBlur  = 10;
@@ -61,14 +68,14 @@ const UI = {
     ctx.shadowColor = '#ff4466';
     ctx.shadowBlur = 10;
     ctx.textBaseline = 'top';
-    ctx.fillText(heartsStr, CONFIG.TARGET_W - pad, pad - 2);
+    ctx.fillText(heartsStr, CONFIG.TARGET_W - pad, _heartWorldY);
     ctx.globalAlpha = 1.0;
 
     // label
     ctx.font      = '11px "Courier New"';
     ctx.fillStyle = CONFIG.NEON_DIM;
     ctx.shadowBlur = 0;
-    ctx.fillText('VIDAS', CONFIG.TARGET_W - pad, pad + 24);
+    ctx.fillText('VIDAS', CONFIG.TARGET_W - pad, _heartWorldY + 22);
 
     HighScoreSystem.drawHUD();
 
@@ -78,12 +85,10 @@ const UI = {
     // Garante que os corações apareçam em qualquer escala/offset mobile.
     if (MobileDetect.isMobile) {
       ctx.save();
-      // Zera qualquer transform ativo — coordenadas de tela física real
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      // Calcula posição em pixels de tela reais
       const heartFontSize = Math.round(20 * scale);
       const hx = canvas.width  - Math.round(16 * scale);
-      const hy = Math.round(offsetY > 0 ? offsetY + 10 * scale : 10 * scale);
+      const hy = Math.round(_heartScreenY);
       ctx.font         = heartFontSize + 'px serif';
       ctx.textAlign    = 'right';
       ctx.textBaseline = 'top';
