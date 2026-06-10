@@ -17,15 +17,34 @@ const MusicSystem = {
     this._audio.loop    = true;
     this._audio.preload = 'auto';
     this._audio.volume  = this._muted ? 0 : this._volume;
-    this._audio.addEventListener('error', () =>
-      console.warn('[MusicSystem] bgm.mp3 não encontrado ou falhou ao carregar'));
+    this._audio.addEventListener('loadeddata',     () => console.log('[BGM-DBG] loadeddata — arquivo baixado'));
+    this._audio.addEventListener('canplaythrough', () => console.log('[BGM-DBG] canplaythrough — pronto pra tocar'));
+    this._audio.addEventListener('play',           () => console.log('[BGM-DBG] play disparado'));
+    this._audio.addEventListener('playing',        () => console.log('[BGM-DBG] PLAYING — tocando de verdade'));
+    this._audio.addEventListener('pause',          () => console.log('[BGM-DBG] pause disparado'));
+    this._audio.addEventListener('ended',          () => console.log('[BGM-DBG] ended'));
+    this._audio.addEventListener('stalled',        () => console.warn('[BGM-DBG] stalled — download travou'));
+    this._audio.addEventListener('error', () => {
+      const err = this._audio.error;
+      console.error('[BGM-DBG] ERRO no audio:', err && err.code, err && err.message);
+    });
+    console.log('[BGM-DBG] init concluído. audio:', this._audio,
+                'src:', this._audio.src,
+                'volume:', this._volume, 'muted:', this._muted);
   },
 
   startMatch() {
+    console.log('[BGM-DBG] startMatch chamado. _audio:', !!this._audio,
+                '_muted:', this._muted, 'volume:', this._audio && this._audio.volume);
     if (!this._audio || this._muted) return;
     this._audio.currentTime = 0;
+    console.log('[BGM-DBG] tentando play(). paused:', this._audio.paused,
+                'currentTime:', this._audio.currentTime, 'volume:', this._audio.volume);
     const p = this._audio.play();
-    if (p) p.catch(() => {});
+    if (p && typeof p.then === 'function') {
+      p.then(() => console.log('[BGM-DBG] play() resolveu — música deve estar tocando'))
+       .catch(err => console.error('[BGM-DBG] play() REJEITOU:', err.name, err.message));
+    }
   },
 
   stopMatch() {
