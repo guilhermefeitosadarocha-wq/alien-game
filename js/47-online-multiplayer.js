@@ -45,6 +45,7 @@ const OnlineMultiplayer = {
   _origGameOver:         null,  // wrap guard — null = não wrapeado
   _localDeadBroadcasted: false, // já broadcastei minha própria morte nesta partida
   _outroDead:            false, // outro jogador está morto
+  _forcedArena:          null,  // { w, h } recebido do host para sincronizar arena
 
   // ── Inicialização ──────────────────────────────────────
   init() {
@@ -239,9 +240,10 @@ const OnlineMultiplayer = {
       }
     });
 
-    // Host disparou o início
-    c.on('broadcast', { event: 'start_match' }, () => {
+    // Host disparou o início — payload contém dimensões da arena do host
+    c.on('broadcast', { event: 'start_match' }, ({ payload }) => {
       if (this.role !== 'guest') return;
+      if (payload && payload.arenaW) this._forcedArena = { w: payload.arenaW, h: payload.arenaH };
       this._startMatch();
     });
 
@@ -425,6 +427,7 @@ const OnlineMultiplayer = {
     this._remoteBullets = [];
     this._localDeadBroadcasted = false;
     this._outroDead            = false;
+    this._forcedArena          = null;
     this._showIniciarBtn(false);
     this._showMainView();
     const input = document.getElementById('onlineCodigoInput');
@@ -436,7 +439,10 @@ const OnlineMultiplayer = {
     if (this.role !== 'host') return;
     if (!this._outroId) { this._showErro('Aguarde o outro jogador entrar.'); return; }
     try {
-      this._canal.send({ type: 'broadcast', event: 'start_match', payload: {} });
+      this._canal.send({
+        type: 'broadcast', event: 'start_match',
+        payload: { arenaW: CONFIG.TARGET_W, arenaH: CONFIG.TARGET_H },
+      });
     } catch (e) {}
     this._startMatch();
   },
@@ -457,6 +463,16 @@ const OnlineMultiplayer = {
     if (typeof MultiplayerSystem !== 'undefined') {
       MultiplayerSystem.enabled = false;
       MultiplayerSystem.showToggleBtn(false);
+    }
+
+    // Guest adota as dimensões da arena do host para manter coords sincronizadas
+    if (this._forcedArena) {
+      CONFIG.TARGET_W = this._forcedArena.w;
+      CONFIG.TARGET_H = this._forcedArena.h;
+      scale   = Math.min(canvas.width / CONFIG.TARGET_W, canvas.height / CONFIG.TARGET_H);
+      offsetX = (canvas.width  - CONFIG.TARGET_W * scale) / 2;
+      offsetY = (canvas.height - CONFIG.TARGET_H * scale) / 2;
+      this._forcedArena = null;
     }
 
     this._outraNave = { ativa: true, buffer: [] };
