@@ -56,4 +56,5 @@ TutorialSystem.init();
 ShotEquipSystem.init();
 DashModeSystem.init();
 MobileExperience.init();
+AdminLab.init();
 requestAnimationFrame(ts => { Game.lastTime = ts; Game.loop(ts); });
