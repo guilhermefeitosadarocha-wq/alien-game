@@ -1491,10 +1491,18 @@ const ProfileSystem = {
   },
 
   // ── Salva perfil no localStorage ────────────────────────
-  saveProfile() {
+  saveProfile(_adminVerified) {
     const nome = this._nameInput.value.trim();
     if (nome.length === 0) {
       this._showFeedback('Digite um nome válido!', true);
+      return;
+    }
+    // Proteção: bloqueia uso do nome de admin em dispositivo sem token válido
+    if (!_adminVerified && typeof window.AdminMode !== 'undefined' && nome === ADMIN_NAME) {
+      window.AdminMode.tryCreateAdminProfile(nome).then(r => {
+        if (r === 'denied') { this._showFeedback('Esse nome é exclusivo e já está reservado.', true); }
+        else                { this.saveProfile(true); }
+      });
       return;
     }
     try {

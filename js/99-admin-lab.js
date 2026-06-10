@@ -22,6 +22,7 @@ const AdminLab = {
         this._toggle();
       }
     });
+    this._verifyOnLoad();
   },
 
   // ── Toggle / Auth ─────────────────────────────────────────
@@ -38,16 +39,9 @@ const AdminLab = {
       this._lockFor(3000);
       return;
     }
-    const url = SupabaseSystem._URL + '/rest/v1/rpc/verify_admin_lock';
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', url, true);
-    xhr.setRequestHeader('Content-Type',  'application/json');
-    xhr.setRequestHeader('apikey',        SupabaseSystem._KEY);
-    xhr.setRequestHeader('Authorization', 'Bearer ' + SupabaseSystem._KEY);
-    xhr.onload = () => {
-      let ok = false;
-      try { ok = JSON.parse(xhr.responseText) === true; } catch (_) {}
-      if (xhr.status >= 200 && xhr.status < 300 && ok) {
+    this._toast('Verificando...', false);
+    this._rpcVerify(ADMIN_NAME, token, ok => {
+      if (ok) {
         this._verified = true;
         this._build();
         this._show();
@@ -56,13 +50,7 @@ const AdminLab = {
         this._toast('Acesso negado.', true);
         this._lockFor(3000);
       }
-    };
-    xhr.onerror = () => {
-      this._toast('Erro de rede.', true);
-      this._lockFor(3000);
-    };
-    xhr.send(JSON.stringify({ p_name: ADMIN_NAME, p_token: token }));
-    this._toast('Verificando...', false);
+    });
   },
 
   _toast(msg, isError) {
@@ -90,6 +78,50 @@ const AdminLab = {
     this._locked = true;
     clearTimeout(this._lockTimer);
     this._lockTimer = setTimeout(() => { this._locked = false; }, ms);
+  },
+
+  _rpcVerify(name, token, cb) {
+    const url = SupabaseSystem._URL + '/rest/v1/rpc/verify_admin_lock';
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-Type',  'application/json');
+    xhr.setRequestHeader('apikey',        SupabaseSystem._KEY);
+    xhr.setRequestHeader('Authorization', 'Bearer ' + SupabaseSystem._KEY);
+    xhr.onload = () => {
+      let ok = false;
+      try { ok = JSON.parse(xhr.responseText) === true; } catch (_) {}
+      cb(xhr.status >= 200 && xhr.status < 300 && ok);
+    };
+    xhr.onerror = () => cb(false);
+    xhr.send(JSON.stringify({ p_name: name, p_token: token }));
+  },
+
+  _verifyOnLoad() {
+    const profileName = localStorage.getItem(ProfileSystem._KEY_NAME);
+    if (!profileName || profileName !== ADMIN_NAME) return;
+    const token = localStorage.getItem('ns_admin_token');
+    if (!token) {
+      console.warn('[ADMIN] perfil admin ativo mas sem token. Defina localStorage.ns_admin_token.');
+      return;
+    }
+    this._rpcVerify(ADMIN_NAME, token, ok => {
+      if (ok) {
+        this._verified = true;
+        this._build();
+        console.log('[ADMIN] modo admin ativo');
+      } else {
+        console.warn('[ADMIN] token inválido pro nome do perfil ativo');
+      }
+    });
+  },
+
+  tryCreateAdminProfile(name) {
+    return new Promise(resolve => {
+      if (name !== ADMIN_NAME) { resolve('ok'); return; }
+      const token = localStorage.getItem('ns_admin_token');
+      if (!token) { resolve('denied'); return; }
+      this._rpcVerify(ADMIN_NAME, token, ok => resolve(ok ? 'ok' : 'denied'));
+    });
   },
 
   // ── Build DOM ─────────────────────────────────────────────
@@ -591,3 +623,5 @@ const AdminLab = {
     logEl.scrollTop = logEl.scrollHeight;
   },
 };
+
+window.AdminMode = AdminLab;
