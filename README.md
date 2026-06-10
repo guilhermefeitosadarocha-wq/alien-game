@@ -21,3 +21,7 @@ Você precisa sobreviver o maior tempo possível enquanto uma horda de emojis im
 
 ---
 ⭐ **Gostou do desafio?** Deixe uma estrela no repositório para apoiar o projeto!
+
+## 🎵 Créditos de Áudio
+* **Música de Fundo:** Gerada através do [Mubert](https://mubert.com) (Licença de uso gratuito com atribuição).
+
