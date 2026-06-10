@@ -53,6 +53,8 @@ const SettingsUI = {
     this._setSlider('masterVol', 'masterVolVal', d.masterVol, '%');
     this._setSlider('sfxVol',    'sfxVolVal',    d.sfxVol,    '%');
     this._setCheckbox('muteToggle', d.muted);
+    this._setSlider('musicVol', 'musicVolVal', d.musicVol ?? 40, '%');
+    this._setCheckbox('musicMuted', d.musicMuted ?? false);
 
     // Visual
     this._setSlider('glowIntensity', 'glowIntensityVal', d.glowIntensity, '');
@@ -227,6 +229,21 @@ const SettingsUI = {
     document.getElementById('muteToggle').addEventListener('change', e => {
       ControlSettings.data.muted = e.target.checked;
       AudioSettings.apply(ControlSettings.data);
+      SaveSystem.save(ControlSettings.data);
+      this.flashSaved();
+    });
+
+    // Música — slider de volume
+    makeSlider('musicVol', 'musicVolVal', '%', v => {
+      ControlSettings.data.musicVol = v;
+      if (typeof MusicSystem !== 'undefined') MusicSystem.setVolume(v / 100);
+    });
+
+    // Música — mute toggle
+    const musicMutedEl = document.getElementById('musicMuted');
+    if (musicMutedEl) musicMutedEl.addEventListener('change', e => {
+      ControlSettings.data.musicMuted = e.target.checked;
+      if (typeof MusicSystem !== 'undefined') MusicSystem.setMuted(e.target.checked);
       SaveSystem.save(ControlSettings.data);
       this.flashSaved();
     });

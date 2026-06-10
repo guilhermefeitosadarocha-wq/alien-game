@@ -5,6 +5,7 @@ const ResumeSystem = {
   resume() {
     if (!PauseState.canResume()) return;
     Game.state = 'playing';
+    if (typeof MusicSystem !== 'undefined') MusicSystem.resume();
     PauseUI.hidePauseMenu();
     PauseUI.syncPauseBtn('playing');
     FreezeSystem.unfreeze();
@@ -75,6 +76,7 @@ const ResumeSystem = {
       Game.score   = 0;
       Game.elapsed = 0;
       Game.state   = 'menu';
+      if (typeof MusicSystem !== 'undefined') MusicSystem.stopMatch();
       PauseUI.syncPauseBtn('menu');
       FreezeSystem.unfreeze();
 
@@ -122,6 +124,7 @@ const PauseEvents = {
     if (!PauseState.canPause()) return;
     FreezeSystem.freeze();
     Game.state = 'paused';
+    if (typeof MusicSystem !== 'undefined') MusicSystem.pause();
     PauseUI.showPauseMenu();
     PauseUI.syncPauseBtn('paused');
     SFX.play('menu_open');

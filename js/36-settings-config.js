@@ -15,9 +15,11 @@ const SETTINGS_DEFAULTS = {
     dash:      'ShiftLeft',
   },
   // Áudio
-  masterVol: 45,
-  sfxVol:    45,
-  muted:     false,
+  masterVol:  45,
+  sfxVol:     45,
+  muted:      false,
+  musicVol:   40,
+  musicMuted: false,
   // Visual
   glowIntensity:   0,
   particlesOn:     true,

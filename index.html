@@ -199,6 +199,24 @@
             <div class="toggle-track"></div>
           </label>
         </div>
+        <div class="settings-row">
+          <span class="settings-row-label">Volume da música
+            <span class="settings-row-sub">BGM durante a partida</span>
+          </span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="range" class="settings-slider" id="musicVol" min="0" max="100" value="40">
+            <span class="slider-val" id="musicVolVal">40%</span>
+          </div>
+        </div>
+        <div class="settings-row">
+          <span class="settings-row-label">Silenciar música
+            <span class="settings-row-sub">Desativa a música de fundo</span>
+          </span>
+          <label class="settings-toggle">
+            <input type="checkbox" id="musicMuted">
+            <div class="toggle-track"></div>
+          </label>
+        </div>
       </div>
 
       <!-- ── ABA VISUAL ── -->
@@ -633,6 +651,7 @@
 <script src="js/45d-shot-equip.js"></script>
 <script src="js/45e-dash-mode.js"></script>
 <script src="js/45f-help-ui.js"></script>
+<script src="js/45g-music-system.js"></script>
 <script src="js/47-online-multiplayer.js"></script>
 <script src="js/47-online-multiplayer.js"></script>
 <script src="js/46-init.js"></script>

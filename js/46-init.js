@@ -42,6 +42,7 @@ PauseEvents._init();
 ScreenFX.init();
 DifficultySystem.reset();
 SettingsUI.init();
+MusicSystem.init();
 EnergySystem.init();
 MatchModifiers.init();
 MatchModifiersClose.init();

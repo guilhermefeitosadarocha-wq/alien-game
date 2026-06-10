@@ -53,6 +53,7 @@ const Game = {
     // Mobile fullscreen: tenta entrar em tela cheia ao iniciar partida
     MobileExperience.requestFullscreen();
     this.state = 'playing';
+    if (typeof MusicSystem !== 'undefined') MusicSystem.startMatch();
     if (typeof PauseUI !== 'undefined' && PauseUI._elPauseBtn) {
       PauseUI.syncPauseBtn('playing');
     }
@@ -71,6 +72,7 @@ const Game = {
 
   gameOver() {
     this.state = 'gameover';
+    if (typeof MusicSystem !== 'undefined') MusicSystem.stopMatch();
     // Mostra tela de game over DOM após delay para efeitos canvas terminarem
     setTimeout(() => { if (typeof GameOverDOM !== 'undefined') GameOverDOM.show(); }, 400);
     HighScoreSystem.check(this.score, this.elapsed);
