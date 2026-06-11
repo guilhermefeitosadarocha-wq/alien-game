@@ -9,6 +9,10 @@
   window.addEventListener('touchstart',  unlock, { once: true, passive: true });
 })();
 
+// ── Auth anônima silenciosa (inicia antes de tudo, não bloqueia) ──
+AuthSystem.init();
+AuthSystem.onReady(() => AuthSystem.syncProfile());
+
 // ── Carregar configurações salvas (antes de qualquer sistema) ──
 ControlSettings.load(SaveSystem.load());
 HighScoreSystem.load();

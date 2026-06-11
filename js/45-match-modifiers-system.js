@@ -67,6 +67,7 @@ const MatchModifiers = {
                 localStorage.setItem('neonSiege_playerAvatar', ProfileSystem._currentAvatar);
               } catch (e) {}
               if (typeof SupabaseSystem !== 'undefined') SupabaseSystem._playerName = nome;
+              if (typeof AuthSystem !== 'undefined') AuthSystem.syncProfile();
               ProfileSystem.hide();
               SFX.play('game_start');
               Game.start();
@@ -78,6 +79,7 @@ const MatchModifiers = {
           if (nome && nome.trim().length > 0) {
             try { localStorage.setItem('neonSiege_playerName', nome.trim()); } catch (e) {}
             if (typeof SupabaseSystem !== 'undefined') SupabaseSystem._playerName = nome.trim();
+            if (typeof AuthSystem !== 'undefined') AuthSystem.syncProfile();
           }
           SFX.play('game_start');
           Game.start();
@@ -1080,10 +1082,9 @@ const SupabaseSystem = {
 
   init() {
     try {
-      this._client = supabase.createClient(
-        this._URL,
-        this._KEY
-      );
+      this._client = (typeof AuthSystem !== 'undefined' && AuthSystem._client)
+        ? AuthSystem._client
+        : supabase.createClient(this._URL, this._KEY);
       this._initialized = true;
       this.loadRanking();
     } catch (e) {
@@ -1514,6 +1515,7 @@ const ProfileSystem = {
         NameScreen._input.value = nome;
       }
     } catch (e) {}
+    if (typeof AuthSystem !== 'undefined') AuthSystem.syncProfile();
     this._showFeedback('Perfil salvo com sucesso!');
     SFX.play('shop_buy');
   },
@@ -1627,6 +1629,7 @@ const NameScreen = {
     SupabaseSystem._playerName = nome;
     // Salva nome no localStorage para não perguntar toda vez
     try { localStorage.setItem('neonSiege_playerName', nome); } catch (e) {}
+    if (typeof AuthSystem !== 'undefined') AuthSystem.syncProfile();
     this.hide();
     SFX.play('game_start');
     if (this._onConfirm) this._onConfirm();
