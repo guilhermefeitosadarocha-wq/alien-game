@@ -259,7 +259,11 @@ const AdminLab = {
       <div class="al-row">
         <button class="al-btn warn" id="alGodMode">⚡ GOD MODE</button>
         <button class="al-btn" id="alTeleport">⊕ CENTRO</button>
+      </div>
+      <div class="al-row">
+        <button class="al-btn" id="alHealFull">❤️ HEAL FULL</button>
         <button class="al-btn" id="alHeal">+1 VIDA</button>
+        <button class="al-btn danger" id="alHealMinus">-1 VIDA</button>
       </div>
     `, true)}
 
@@ -379,6 +383,7 @@ const AdminLab = {
       if (!isNaN(v)) Player.lives = Math.max(0, v);
       if (!isNaN(m) && m > 0) CONFIG.PLAYER_LIVES = m;
       this._addLog('lives=' + Player.lives + ' maxLives=' + CONFIG.PLAYER_LIVES);
+      if (Player.lives <= 0 && typeof Game !== 'undefined') Game.gameOver();
     });
     $('alSetSpeed').addEventListener('click', () => {
       const v = parseInt($('alSpeed').value);
@@ -393,9 +398,19 @@ const AdminLab = {
       Player.y = CONFIG.TARGET_H / 2;
       this._addLog('Teleported to center');
     });
+    $('alHealFull').addEventListener('click', () => {
+      Player.lives = CONFIG.PLAYER_LIVES;
+      this._addLog('Heal full → lives=' + Player.lives);
+    });
     $('alHeal').addEventListener('click', () => {
+      CONFIG.PLAYER_LIVES = Math.min(CONFIG.PLAYER_LIVES + 1, 20);
       Player.lives = Math.min(Player.lives + 1, CONFIG.PLAYER_LIVES);
-      this._addLog('Heal → lives=' + Player.lives);
+      this._addLog('+1 vida → lives=' + Player.lives + ' max=' + CONFIG.PLAYER_LIVES);
+    });
+    $('alHealMinus').addEventListener('click', () => {
+      Player.lives = Math.max(0, Player.lives - 1);
+      this._addLog('-1 vida → lives=' + Player.lives);
+      if (Player.lives <= 0 && typeof Game !== 'undefined') Game.gameOver();
     });
 
     // Economy
