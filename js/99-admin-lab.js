@@ -2,7 +2,7 @@
 //  ADMIN LAB — painel de laboratório (Ctrl+Shift+L)
 //  Acesso restrito: verificado via Supabase RPC verify_admin_lock
 // ═══════════════════════════════════════════════════════════
-const ADMIN_NAME = '<rapaz>';
+const ADMIN_NAME = 'rapaz';
 
 const AdminLab = {
   _panel:          null,
