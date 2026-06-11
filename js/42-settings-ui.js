@@ -374,6 +374,16 @@ const SettingsUI = {
         SaveSystem.save(ControlSettings.data);
         this.flashSaved();
       });
+      cameraZoomEl.addEventListener('wheel', e => {
+        e.preventDefault();
+        const step  = parseFloat(cameraZoomEl.step) || 1;
+        const min   = parseFloat(cameraZoomEl.min)  || 0;
+        const max   = parseFloat(cameraZoomEl.max)  || 100;
+        const delta = e.deltaY < 0 ? +step : -step;
+        const next  = Math.max(min, Math.min(max, parseFloat(cameraZoomEl.value) + delta));
+        cameraZoomEl.value = next;
+        cameraZoomEl.dispatchEvent(new Event('input', { bubbles: true }));
+      }, { passive: false });
     }
   },
 };
