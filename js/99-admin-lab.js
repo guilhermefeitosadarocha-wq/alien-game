@@ -218,6 +218,8 @@ const AdminLab = {
     });
 
     this._bind();
+    this._enableDrag();
+    this._restorePos();
   },
 
   _sec(title, id, body, defaultOpen) {
@@ -636,6 +638,76 @@ const AdminLab = {
     logEl.appendChild(entry);
     while (logEl.children.length > 30) logEl.removeChild(logEl.firstChild);
     logEl.scrollTop = logEl.scrollHeight;
+  },
+
+  // ── Drag to reposition ────────────────────────────────────
+  _enableDrag() {
+    const panel  = this._panel;
+    const header = document.getElementById('alHeader');
+    if (!panel || !header) return;
+
+    header.style.cursor      = 'move';
+    header.style.userSelect  = 'none';
+    header.style.touchAction = 'none';
+
+    let dragging = false;
+    let offsetX = 0, offsetY = 0;
+
+    const getPoint = e =>
+      e.touches && e.touches[0]
+        ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+        : { x: e.clientX, y: e.clientY };
+
+    const onDown = e => {
+      if (e.target.closest('button, input, select, textarea')) return;
+      const rect = panel.getBoundingClientRect();
+      const pt   = getPoint(e);
+      offsetX  = pt.x - rect.left;
+      offsetY  = pt.y - rect.top;
+      dragging = true;
+      e.preventDefault();
+    };
+
+    const onMove = e => {
+      if (!dragging) return;
+      const pt = getPoint(e);
+      const w  = panel.offsetWidth;
+      const x  = Math.max(-(w - 40), Math.min(window.innerWidth  - 40, pt.x - offsetX));
+      const y  = Math.max(0,          Math.min(window.innerHeight - 40, pt.y - offsetY));
+      panel.style.left   = x + 'px';
+      panel.style.top    = y + 'px';
+      panel.style.right  = 'auto';
+      panel.style.bottom = 'auto';
+      e.preventDefault();
+    };
+
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      try {
+        localStorage.setItem('ns_admin_pos', JSON.stringify({
+          left: panel.style.left,
+          top:  panel.style.top,
+        }));
+      } catch (_) {}
+    };
+
+    header.addEventListener('mousedown',  onDown);
+    window.addEventListener('mousemove',  onMove);
+    window.addEventListener('mouseup',    onUp);
+    header.addEventListener('touchstart', onDown, { passive: false });
+    window.addEventListener('touchmove',  onMove, { passive: false });
+    window.addEventListener('touchend',   onUp);
+  },
+
+  _restorePos() {
+    try {
+      const raw = localStorage.getItem('ns_admin_pos');
+      if (!raw || !this._panel) return;
+      const { left, top } = JSON.parse(raw);
+      if (left) { this._panel.style.left = left; this._panel.style.right = 'auto'; }
+      if (top)   this._panel.style.top  = top;
+    } catch (_) {}
   },
 };
 
