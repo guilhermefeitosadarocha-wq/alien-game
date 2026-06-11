@@ -30,5 +30,7 @@ const SETTINGS_DEFAULTS = {
   mobileOpacity:   100,
   shootBtnBottom:  30,
   dashMode:        'button',
+  // Zoom: mobile abre mais afastado (80 = mínimo do slider, mais campo de visão)
+  cameraZoom:      MobileDetect.isMobile ? 0.80 : 1.0,
 };
 

@@ -68,7 +68,7 @@ const SettingsUI = {
     this._setRadioGroup('shootBtnPos', String(d.shootBtnBottom));
     this._setRadioGroup('dashMode', d.dashMode || 'button');
     // Zoom da câmera
-    this._setSlider('cameraZoom', 'cameraZoomVal', Math.round(CAMERA_ZOOM * 100), '%');
+    this._setSlider('cameraZoom', 'cameraZoomVal', Math.round((d.cameraZoom ?? 1.0) * 100), '%');
   },
 
   _refreshKeybindBtns() {
@@ -369,6 +369,7 @@ const SettingsUI = {
       cameraZoomEl.addEventListener('input', () => {
         const v   = parseInt(cameraZoomEl.value);
         CAMERA_ZOOM = v / 100;
+        ControlSettings.data.cameraZoom = CAMERA_ZOOM;
         cameraZoomValEl.textContent = v + '%';
         resizeCanvas();
         SaveSystem.save(ControlSettings.data);

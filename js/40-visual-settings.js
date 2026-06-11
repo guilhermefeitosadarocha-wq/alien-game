@@ -7,6 +7,7 @@ const VisualSettings = {
     CONFIG._particlesDisabled  = !data.particlesOn;
     CONFIG._shakeDisabled      = !data.shakeOn;
     CONFIG._flashDisabled      = !data.flashOn;
+    if (data.cameraZoom !== undefined) CAMERA_ZOOM = data.cameraZoom;
   },
 };
 
