@@ -20,7 +20,7 @@ const EnemyTypes = {
     fast: {
       emoji: '💫',
       size: 14, hp: 1,
-      speedFactor: 2.2,
+      speedFactor: 2.09,
       scoreBonus: 5,
       coinBonus: 0,
       glow: 'rgba(0,255,200,0.9)',

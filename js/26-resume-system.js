@@ -182,8 +182,8 @@ const DifficultySystem = {
   weightedEnemyType() {
     const lv = this.level;
     const pool = ['normal'];
-    if (lv >= 2)  pool.push('fast');
-    if (lv >= 3)  pool.push('fast');
+    if (lv >= 2 && Game.elapsed >= 35)  pool.push('fast');
+    if (lv >= 3 && Game.elapsed >= 35)  pool.push('fast');
     if (lv >= 4)  pool.push('tank');
     if (lv >= 5)  pool.push('zigzag');
     if (lv >= 7)  pool.push('shooter');
