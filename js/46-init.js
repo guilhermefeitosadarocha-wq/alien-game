@@ -11,7 +11,10 @@
 
 // ── Auth anônima silenciosa (inicia antes de tudo, não bloqueia) ──
 AuthSystem.init();
-AuthSystem.onReady(() => AuthSystem.syncProfile());
+AuthSystem.onReady(() => {
+  AuthSystem.syncProfile();
+  PlayerData.init();
+});
 
 // ── Carregar configurações salvas (antes de qualquer sistema) ──
 ControlSettings.load(SaveSystem.load());

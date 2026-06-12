@@ -422,6 +422,7 @@ const AdminLab = {
         CoinSystem._coins = v;
         CoinUI.syncCoins();
         if (typeof ShopUI !== 'undefined' && ShopUI._elCoinAmt) ShopUI.syncCoinDisplay();
+        if (typeof PlayerData !== 'undefined') PlayerData.scheduleSave();
         this._addLog('Coins set=' + v);
       }
     });

@@ -82,6 +82,7 @@ const Game = {
     } else {
       alert('SupabaseSystem não encontrado!');
     }
+    if (typeof PlayerData !== 'undefined' && PlayerData._isReady) PlayerData.save();
     Bullets.clear();
     EnemyBullets.clear();
     ComboSystem.reset();
