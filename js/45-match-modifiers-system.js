@@ -1095,12 +1095,19 @@ const SupabaseSystem = {
   // ── Salva o recorde no banco ─────────────────────────────
   saveRecord(score, tempo) {
     if (!this._initialized || score <= 0) return;
-    const url = this._URL + '/rest/v1/recordes';
-    const data = JSON.stringify({
-      nome:  this._playerName,
-      score: Math.floor(score),
-      tempo: parseFloat(tempo.toFixed(2)),
+    if (typeof AuthSystem === 'undefined' || !AuthSystem._ready || !AuthSystem.getUserId()) {
+      console.warn('[RANKING] saveRecord abortado: auth não pronto');
+      return;
+    }
+    const userId = AuthSystem.getUserId();
+    const url    = this._URL + '/rest/v1/recordes';
+    const body   = JSON.stringify({
+      nome:    this._playerName,
+      score:   Math.floor(score),
+      tempo:   parseFloat(tempo.toFixed(2)),
+      user_id: userId,
     });
+    console.log('[RANKING] saveRecord enviado:', { user_id: userId, score: Math.floor(score), nome: this._playerName });
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -1111,13 +1118,13 @@ const SupabaseSystem = {
       if (xhr.status >= 200 && xhr.status < 300) {
         this.loadRanking();
       } else {
-        console.warn('Erro ao salvar recorde:', xhr.status, xhr.responseText);
+        console.warn('[RANKING] saveRecord falhou:', xhr.status, xhr.responseText);
       }
     };
     xhr.onerror = () => {
-      console.warn('Erro de rede XHR');
+      console.warn('[RANKING] saveRecord falhou: erro de rede');
     };
-    xhr.send(data);
+    xhr.send(body);
   },
 
   // ── Carrega o ranking do banco ───────────────────────────
@@ -1127,7 +1134,7 @@ const SupabaseSystem = {
   loadRanking() {
     if (!this._initialized) return;
     const url = this._URL
-      + '/rest/v1/recordes?select=nome,score,tempo&order=score.desc&limit=100'
+      + '/rest/v1/recordes?select=nome,score,tempo,user_id&order=score.desc&limit=100'
       + '&apikey=' + encodeURIComponent(this._KEY);
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
@@ -1135,19 +1142,20 @@ const SupabaseSystem = {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           this._ranking = JSON.parse(xhr.responseText) || [];
+          console.log('[RANKING] loadRanking carregado:', this._ranking.length, 'linhas');
           // Se o modal de ranking estiver aberto, atualiza a lista na hora
           if (typeof GameOverDOM !== 'undefined' && GameOverDOM._rankingModal
               && GameOverDOM._rankingModal.classList.contains('open')) {
             GameOverDOM._renderRanking();
           }
         } catch (e) {
-          console.warn('Ranking: resposta inválida', e);
+          console.warn('[RANKING] loadRanking falhou: resposta inválida', e);
         }
       } else {
-        console.warn('Erro ao carregar ranking:', xhr.status, xhr.responseText);
+        console.warn('[RANKING] loadRanking falhou:', xhr.status, xhr.responseText);
       }
     };
-    xhr.onerror = () => { console.warn('Erro de rede ao carregar ranking'); };
+    xhr.onerror = () => { console.warn('[RANKING] loadRanking falhou: erro de rede'); };
     xhr.send();
   },
 
@@ -1176,9 +1184,10 @@ const SupabaseSystem = {
     ctx.fillText('◈ RANKING GLOBAL ◈', cx, startY);
 
     // Lista top 10
+    const _myUid = (typeof AuthSystem !== 'undefined') ? AuthSystem.getUserId() : null;
     this._ranking.forEach((r, i) => {
-      const y       = startY + 20 + i * 18;
-      const isPlayer = r.nome === this._playerName;
+      const y        = startY + 20 + i * 18;
+      const isPlayer = _myUid && r.user_id === _myUid;
       ctx.font      = '11px "Courier New"';
       ctx.fillStyle = isPlayer ? '#ffdd00' : 'rgba(0,200,255,0.75)';
       ctx.shadowColor = isPlayer ? '#ffdd00' : 'rgba(0,200,255,0.5)';
@@ -1788,7 +1797,7 @@ const GameOverDOM = {
   _renderRanking() {
     if (!this._rankingList) return;
     const raw     = (typeof SupabaseSystem !== 'undefined') ? SupabaseSystem._ranking : [];
-    const myName  = (typeof SupabaseSystem !== 'undefined') ? SupabaseSystem._playerName : '';
+    const _myUid  = (typeof AuthSystem !== 'undefined') ? AuthSystem.getUserId() : null;
     this._rankingList.innerHTML = '';
 
     if (raw.length === 0) {
@@ -1816,7 +1825,7 @@ const GameOverDOM = {
     list.forEach((row, i) => {
       const li = document.createElement('li');
       if (i < 3) li.classList.add('rk-top');
-      if (myName && row.nome === myName) li.classList.add('rk-me');
+      if (_myUid && row.user_id === _myUid) li.classList.add('rk-me');
       const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
       const tempo = typeof SupabaseSystem._formatTime === 'function'
         ? SupabaseSystem._formatTime(row.tempo)
