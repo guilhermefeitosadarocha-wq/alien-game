@@ -282,6 +282,9 @@ const AdminLab = {
         <button class="al-btn" id="alSetScore">SET</button>
         <button class="al-btn danger" id="alResetCoins">RESET COINS</button>
       </div>
+      <div class="al-row">
+        <button class="al-btn danger" id="alResetUpgrades">RESET UPGRADES</button>
+      </div>
     `, false)}
 
     ${this._sec('ENEMIES', 'enemies', `
@@ -437,6 +440,14 @@ const AdminLab = {
     $('alResetCoins').addEventListener('click', () => {
       CoinSystem.reset();
       this._addLog('Coins reset to 0');
+    });
+    $('alResetUpgrades').addEventListener('click', () => {
+      if (typeof PurchaseSystem !== 'undefined') {
+        PurchaseSystem.reset();
+        if (typeof ShopUI !== 'undefined') ShopUI._refreshAllCards();
+        if (typeof PlayerData !== 'undefined') PlayerData.scheduleSave();
+        this._addLog('upgrades reset');
+      }
     });
 
     // Enemies
