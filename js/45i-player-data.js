@@ -12,6 +12,7 @@ const PlayerData = {
     this.load().then(() => {
       this._patchCoinSystem();
       this._patchSkinEquipSystem();
+      this._patchPurchaseSystem();
       this._isReady = true;
       console.log('[PLAYER_DATA] init concluído');
     });
@@ -26,7 +27,7 @@ const PlayerData = {
     try {
       const { data, error } = await AuthSystem._client
         .from('player_data')
-        .select('coins, selected_ship')
+        .select('coins, selected_ship, upgrades')
         .eq('user_id', uid)
         .single();
       if (error) {
@@ -38,7 +39,15 @@ const PlayerData = {
         CoinUI.syncCoins();
         Player.skin = data.selected_ship || 'default';
         SkinEquipSystem._equipped = data.selected_ship === 'interceptor' ? 'interceptor' : null;
-        console.log('[PLAYER_DATA] load OK:', { coins: data.coins, selected_ship: data.selected_ship });
+        if (typeof PurchaseSystem !== 'undefined' && data.upgrades && typeof data.upgrades === 'object') {
+          Object.assign(PurchaseSystem.levels, data.upgrades);
+          for (const [id, lvl] of Object.entries(data.upgrades)) {
+            const item = SHOP_ITEMS.find(it => it.id === id);
+            if (item && typeof item.effect === 'function') item.effect(lvl);
+          }
+          console.log('[PLAYER_DATA] upgrades aplicados:', data.upgrades);
+        }
+        console.log('[PLAYER_DATA] load OK:', { coins: data.coins, selected_ship: data.selected_ship, upgrades: data.upgrades });
       }
     } catch (e) {
       console.warn('[PLAYER_DATA] load exceção:', e.message);
@@ -59,6 +68,7 @@ const PlayerData = {
     const updates = {
       coins:         CoinSystem._coins,
       selected_ship: (typeof Player !== 'undefined' && Player.skin) ? Player.skin : 'default',
+      upgrades:      (typeof PurchaseSystem !== 'undefined') ? { ...PurchaseSystem.levels } : {},
     };
     const { error } = await AuthSystem._client
       .from('player_data')
@@ -101,6 +111,16 @@ const PlayerData = {
     const _origEquip = SkinEquipSystem.equip;
     SkinEquipSystem.equip = function(id) {
       const r = _origEquip.apply(this, arguments);
+      self.scheduleSave();
+      return r;
+    };
+  },
+
+  _patchPurchaseSystem() {
+    const self = this;
+    const _origBuy = PurchaseSystem.buy;
+    PurchaseSystem.buy = function() {
+      const r = _origBuy.apply(this, arguments);
       self.scheduleSave();
       return r;
     };
