@@ -1093,29 +1093,42 @@ const SupabaseSystem = {
   },
 
   // ── Salva o recorde no banco ─────────────────────────────
-  saveRecord(score, tempo) {
+  async saveRecord(score, tempo) {
     if (!this._initialized || score <= 0) return;
     if (typeof AuthSystem === 'undefined' || !AuthSystem._ready || !AuthSystem.getUserId()) {
       console.warn('[RANKING] saveRecord abortado: auth não pronto');
       return;
     }
+
+    // Pega o JWT da sessão — auth.uid() só funciona com o token do usuário, não com a apikey
+    let accessToken = null;
+    try {
+      const { data: { session } } = await AuthSystem._client.auth.getSession();
+      accessToken = session?.access_token || null;
+    } catch (e) {
+      console.warn('[RANKING] falha ao obter sessão:', e);
+    }
+    if (!accessToken) {
+      console.warn('[RANKING] saveRecord abortado: sem JWT da sessão');
+      return;
+    }
+
     const userId = AuthSystem.getUserId();
-    const url    = this._URL + '/rest/v1/recordes';
     const body   = JSON.stringify({
       nome:    this._playerName,
       score:   Math.floor(score),
       tempo:   parseFloat(tempo.toFixed(2)),
       user_id: userId,
     });
-    console.log('[RANKING] saveRecord enviado:', { user_id: userId, score: Math.floor(score), nome: this._playerName });
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', url, true);
+    xhr.open('POST', this._URL + '/rest/v1/recordes', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('apikey', this._KEY);
-    xhr.setRequestHeader('Authorization', 'Bearer ' + this._KEY);
+    xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
     xhr.setRequestHeader('Prefer', 'return=minimal');
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
+        console.log('[RANKING] saveRecord enviado:', { user_id: userId, score: Math.floor(score), nome: this._playerName });
         this.loadRanking();
       } else {
         console.warn('[RANKING] saveRecord falhou:', xhr.status, xhr.responseText);
