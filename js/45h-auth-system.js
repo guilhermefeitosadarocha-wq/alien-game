@@ -12,6 +12,7 @@ const AuthSystem = {
   _callbacks: [],
 
   init() {
+    console.log('[AUTH] init iniciando');
     try {
       this._client = supabase.createClient(this._URL, this._KEY, {
         auth: {
@@ -41,10 +42,20 @@ const AuthSystem = {
       const { data: { session } } = await this._client.auth.getSession();
       if (session && session.user) {
         this._userId = session.user.id;
+        this._ready = true;
+        console.log('[AUTH] usuário ativo:', this._userId);
+        this.syncProfile();
+        this._flush();
         return;
       }
       const { data, error } = await this._client.auth.signInAnonymously();
-      if (!error && data && data.user) this._userId = data.user.id;
+      if (!error && data && data.user) {
+        this._userId = data.user.id;
+        this._ready = true;
+        console.log('[AUTH] usuário ativo:', this._userId);
+        this.syncProfile();
+        this._flush();
+      }
     } catch (_) {}
   },
 
@@ -60,21 +71,30 @@ const AuthSystem = {
 
   getUserId() { return this._userId; },
 
-  // Sincroniza nome e avatar do localStorage com a tabela profiles.
-  // No-op se auth ainda não completou ou falhou.
-  syncProfile() {
-    if (!this._userId || !this._client) return;
-    const name   = localStorage.getItem('neonSiege_playerName')   || '';
-    const avatar = localStorage.getItem('neonSiege_playerAvatar') || '';
-    if (!name) return;
-    this._client
+  async syncProfile() {
+    if (!this._ready || !this._userId) return;
+
+    const nome   = localStorage.getItem('neonSiege_playerName');
+    const avatar = localStorage.getItem('neonSiege_playerAvatar');
+
+    const updates = {};
+    if (nome)   updates.nome   = nome;
+    if (avatar) updates.avatar = avatar;
+    if (Object.keys(updates).length === 0) {
+      console.log('[AUTH] syncProfile: nada local pra sincronizar');
+      return;
+    }
+
+    const { error } = await this._client
       .from('profiles')
-      .upsert(
-        { id: this._userId, name, avatar, updated_at: new Date().toISOString() },
-        { onConflict: 'id' }
-      )
-      .then(() => {})
-      .catch(() => {});
+      .update(updates)
+      .eq('id', this._userId);
+
+    if (error) {
+      console.warn('[AUTH] syncProfile falhou:', error.message);
+    } else {
+      console.log('[AUTH] syncProfile OK:', updates);
+    }
   },
 };
 
