@@ -16,6 +16,7 @@ const MatchModifiers = {
 
   init() {
     this._overlay = document.getElementById('modifierOverlay');
+    this.hide(); // garante overlay fechado no boot (defensivo contra cache/state residual)
     const list    = document.getElementById('modifierList');
     if (!list) return;
     list.innerHTML = '';
